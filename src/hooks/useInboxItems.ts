@@ -249,6 +249,7 @@ export interface InboxItemsResult {
   lowPriority: InboxItem[];
   isLoading: boolean;
   isError: boolean;
+  errors?: string[];
 }
 
 /**
@@ -283,7 +284,13 @@ export function useInboxItems(monitoredRepos: string[]): InboxItemsResult {
 
   const isLoading =
     notifLoading || prsLoading || issuesLoading || reviewsLoading;
-  const isError = notifError || prsError || issuesError || reviewsError;
+  const isError = notifError && prsError && issuesError && reviewsError;
+
+  const errors: string[] = [];
+  if (notifError) errors.push('Notifications');
+  if (prsError) errors.push('Pull Requests');
+  if (issuesError) errors.push('Issues');
+  if (reviewsError) errors.push('Review Requests');
 
   const result = useMemo(() => {
     // ── Build unified list with dedup ──
@@ -400,5 +407,6 @@ export function useInboxItems(monitoredRepos: string[]): InboxItemsResult {
     ...result,
     isLoading,
     isError,
+    errors,
   };
 }

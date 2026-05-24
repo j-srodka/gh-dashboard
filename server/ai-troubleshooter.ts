@@ -27,7 +27,7 @@ const AGENT_CLIS: Record<string, { binary: string; args: (prompt: string) => str
   },
   cursor: {
     binary: 'cursor',
-    args: (prompt) => ['agent', prompt],
+    args: (prompt) => ['agent', '--trust', prompt],
   },
   codex: {
     binary: 'codex',

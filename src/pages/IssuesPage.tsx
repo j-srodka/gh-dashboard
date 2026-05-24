@@ -3,16 +3,20 @@ import { useIssues } from '@/hooks/useGitHubQuery';
 import { useMonitoredRepos } from '@/hooks/useMonitoredRepos';
 import { LABEL_COLORS } from '@/lib/constants';
 import { exportToJson } from '@/lib/utils';
-import { CircleDot, CheckCircle2, ExternalLink, Download } from 'lucide-react';
+import { CircleDot, CheckCircle2, ExternalLink, Download, X } from 'lucide-react';
 
 type IssueFilter = 'all' | 'open' | 'closed';
 
 export function IssuesPage() {
   const { monitoredRepos } = useMonitoredRepos();
-  const { data, isLoading } = useIssues(monitoredRepos);
+  const { data, isLoading } = useIssues(monitoredRepos) as any;
   const [filter, setFilter] = useState<IssueFilter>('all');
   const [search, setSearch] = useState('');
   const [toast, setToast] = useState<string | null>(null);
+  const [selectedNewIssueRepo, setSelectedNewIssueRepo] = useState<string>('');
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const repoParam = searchParams.get('repo');
 
   const issues = (data || [])
     .filter((i: any) => !i.pull_request)
@@ -20,16 +24,21 @@ export function IssuesPage() {
       if (filter === 'open' && i.state !== 'open') return false;
       if (filter === 'closed' && i.state !== 'closed') return false;
       if (search && !i.title.toLowerCase().includes(search.toLowerCase())) return false;
+      if (repoParam) {
+        const repoName = i.repository_url?.split('/').pop();
+        if (repoName !== repoParam) return false;
+      }
       return true;
     });
 
-  const handleNewIssue = () => {
-    if (monitoredRepos.length === 0) {
+  const handleNewIssue = (repoFullName?: string) => {
+    const targetRepo = repoFullName || selectedNewIssueRepo || monitoredRepos[0];
+    if (!targetRepo) {
       setToast('Please select at least one repo in Settings first.');
       setTimeout(() => setToast(null), 3000);
       return;
     }
-    const [owner, repo] = monitoredRepos[0].split('/');
+    const [owner, repo] = targetRepo.split('/');
     const url = `https://github.com/${owner}/${repo}/issues/new`;
     const win = window.open(url, '_blank', 'noopener,noreferrer');
     if (!win) {
@@ -46,7 +55,17 @@ export function IssuesPage() {
     }
   };
 
-  if (isLoading) {
+  const clearRepoFilter = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('repo');
+    window.history.pushState({}, '', url.pathname + url.search);
+    // Force a re-render by setting dummy state or let the component re-read search params
+    // Since we're changing the history state, window.location.search might not reactively update
+    // unless we trigger a state update, or just navigate/reload. Let's do a hard window location update or simple state trick.
+    window.location.search = url.search;
+  };
+
+  if (isLoading && (!data || data.length === 0)) {
     return <div className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>Loading...</div>;
   }
 
@@ -71,15 +90,46 @@ export function IssuesPage() {
           >
             <Download className="w-3.5 h-3.5" /> Export JSON
           </button>
-          <button
-            onClick={handleNewIssue}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-90"
-            style={{ background: 'var(--color-brand)' }}
-          >
-            <CircleDot className="w-4 h-4" /> New Issue
-          </button>
+          {monitoredRepos.length > 1 ? (
+            <div className="flex items-center gap-1">
+              <select
+                value={selectedNewIssueRepo || monitoredRepos[0]}
+                onChange={(e) => setSelectedNewIssueRepo(e.target.value)}
+                className="rounded-lg border px-2.5 py-1.5 text-xs outline-none focus:border-blue-400"
+                style={{ background: 'var(--color-surface-secondary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+              >
+                {monitoredRepos.map((r) => (
+                  <option key={r} value={r}>{r.split('/').pop()}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => handleNewIssue()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-90"
+                style={{ background: 'var(--color-brand)' }}
+              >
+                <CircleDot className="w-4 h-4" /> New Issue
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => handleNewIssue(monitoredRepos[0])}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-90"
+              style={{ background: 'var(--color-brand)' }}
+            >
+              <CircleDot className="w-4 h-4" /> New Issue
+            </button>
+          )}
         </div>
       </div>
+
+      {repoParam && (
+        <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg border text-xs font-medium" style={{ background: 'var(--color-surface-secondary)', borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}>
+          <span>Filtering issues for repository: <strong style={{ color: 'var(--color-text-primary)' }}>{repoParam}</strong></span>
+          <button onClick={clearRepoFilter} className="p-0.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800" title="Clear filter">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       <div className="rounded-xl border p-4 mb-6" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
         <div className="flex flex-wrap items-center gap-3">
@@ -117,6 +167,9 @@ export function IssuesPage() {
       </div>
 
       <div className="space-y-2">
+        {issues.length === 0 && (
+          <div className="text-center py-8 text-sm" style={{ color: 'var(--color-text-tertiary)' }}>No issues match your filters</div>
+        )}
         {issues.map((issue: any) => {
           const repoName = issue.repository_url?.split('/').pop() || 'unknown';
           const authorInitials = issue.user?.login?.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || 'UN';

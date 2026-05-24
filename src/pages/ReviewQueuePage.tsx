@@ -182,7 +182,6 @@ export function ReviewQueuePage() {
 
   // ── Local state ──────────────────────────────────────────────────────────
   const [sortBy, setSortBy] = useState<SortMode>('urgency');
-  const [repoFilter, setRepoFilter] = useState<string>('all');
   const [expandedPR, setExpandedPR] = useState<number | null>(null);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{
@@ -215,7 +214,7 @@ export function ReviewQueuePage() {
   }, [prs]);
 
   const filteredPRs = useMemo(() => {
-    let result = repoFilter === 'all' ? [...prs] : prs.filter((p: any) => p._repoFull === repoFilter);
+    let result = [...prs];
     result.sort((a: any, b: any) => {
       switch (sortBy) {
         case 'urgency':
@@ -229,7 +228,7 @@ export function ReviewQueuePage() {
       }
     });
     return result;
-  }, [prs, repoFilter, sortBy]);
+  }, [prs, sortBy]);
 
   // ── Diff files query (fetched only when a PR is expanded) ────────────────
   const expandedPRData = useMemo(
@@ -247,9 +246,10 @@ export function ReviewQueuePage() {
     queryKey: ['diff-files', expandedOwner, expandedRepo, expandedPR],
     queryFn: () =>
       githubGet<FileDiff[]>(
-        `repos/${encodeURIComponent(expandedOwner!)}/${encodeURIComponent(expandedRepo!)}/pulls/${expandedPR}/files`,
+        `repos/${encodeURIComponent(expandedOwner!)}/${encodeURIComponent(expandedRepo!)}/pulls/${expandedPRData?.number}/files`,
       ),
-    enabled: !!expandedOwner && !!expandedRepo && expandedPR !== null,
+    enabled: !!expandedOwner && !!expandedRepo && expandedPR !== null && !!expandedPRData,
+    staleTime: 60_000, // Cache diff files for 1 minute
   });
 
   // ── Selected file diff content ───────────────────────────────────────────
@@ -339,23 +339,7 @@ export function ReviewQueuePage() {
         style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
       >
         <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={repoFilter}
-            onChange={(e) => setRepoFilter(e.target.value)}
-            className="min-w-[180px] rounded-lg border px-3 py-2 text-sm outline-none"
-            style={{
-              background: 'var(--color-surface-secondary)',
-              borderColor: 'var(--color-border)',
-              color: 'var(--color-text-primary)',
-            }}
-          >
-            <option value="all">All Repositories</option>
-            {uniqueRepos.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
+
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortMode)}
@@ -655,8 +639,8 @@ export function ReviewQueuePage() {
                               <button
                                 onClick={() =>
                                   handleReviewAction(
-                                    expandedOwner!,
-                                    expandedRepo!,
+                                    expandedOwner || '',
+                                    expandedRepo || '',
                                     pr.number,
                                     'APPROVE',
                                   )
@@ -671,8 +655,8 @@ export function ReviewQueuePage() {
                               <button
                                 onClick={() =>
                                   handleReviewAction(
-                                    expandedOwner!,
-                                    expandedRepo!,
+                                    expandedOwner || '',
+                                    expandedRepo || '',
                                     pr.number,
                                     'REQUEST_CHANGES',
                                   )

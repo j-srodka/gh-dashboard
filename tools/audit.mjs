@@ -24,7 +24,6 @@ const ROUTES = [
   { path: '/', name: 'Overview' },
   { path: '/repositories', name: 'Repositories' },
   { path: '/insights', name: 'Insights' },
-  { path: '/digest', name: 'Digest' },
   { path: '/pull-requests', name: 'Pull Requests' },
   { path: '/actions', name: 'Actions' },
   { path: '/issues', name: 'Issues' },

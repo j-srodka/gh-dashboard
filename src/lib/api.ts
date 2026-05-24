@@ -53,7 +53,7 @@ export async function githubGetResponse(path: string): Promise<Response> {
 
   const response = await fetch(url, { method: 'GET', headers });
 
-  if (!response.ok) {
+  if (!response.ok && response.status !== 404 && response.status !== 204) {
     throw new Error(`GitHub API ${response.status}: ${response.statusText}`);
   }
 

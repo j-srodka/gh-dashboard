@@ -298,7 +298,10 @@ export function ActionsPage() {
   const { data: repoData, isLoading: reposLoading } = useRepos();
   const { monitoredRepos } = useMonitoredRepos();
   const [wfFilter, setWfFilter] = useState<WfFilter>('all');
-  const [repoFilter, setRepoFilter] = useState<string>('all');
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const repoParam = searchParams.get('repo');
+  const [repoFilter, setRepoFilter] = useState<string>(repoParam || 'all');
   const [refreshing, setRefreshing] = useState(false);
 
   const {
@@ -345,7 +348,18 @@ export function ActionsPage() {
     setRefreshing(false);
   };
 
-  const isBusy = reposLoading || bulkLoading;
+  const handleRepoFilterChange = (val: string) => {
+    setRepoFilter(val);
+    const url = new URL(window.location.href);
+    if (val === 'all') {
+      url.searchParams.delete('repo');
+    } else {
+      url.searchParams.set('repo', val);
+    }
+    window.history.pushState({}, '', url.pathname + url.search);
+  };
+
+  const isBusy = (reposLoading || bulkLoading) && (!bulkRuns || bulkRuns.length === 0);
   const { data: ciHealth } = useCIHealth(monitoredRepos);
 
   const ciSummary = useMemo(() => {
@@ -485,7 +499,7 @@ export function ActionsPage() {
             <select
               aria-label="Filter by repository"
               value={repoFilter}
-              onChange={(e) => setRepoFilter(e.target.value)}
+              onChange={(e) => handleRepoFilterChange(e.target.value)}
               className="min-w-[140px] rounded-lg border px-3 py-1.5 text-xs outline-none"
               style={{ background: 'var(--color-surface-secondary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
             >

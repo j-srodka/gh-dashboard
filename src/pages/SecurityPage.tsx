@@ -142,7 +142,7 @@ export function SecurityPage() {
           const cAlerts = showCodeScanning ? repoAlerts.codeScanning : [];
           const total = dAlerts.length + cAlerts.length;
 
-          if (total === 0) return null;
+          if (total === 0 && !repoAlerts.error) return null;
 
           return (
             <div key={repoAlerts.repo} className="rounded-xl border overflow-hidden" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>

@@ -232,6 +232,7 @@ export function NotificationsPage() {
     items,
     isLoading,
     isError,
+    errors,
   }: InboxItemsResult = useInboxItems(monitoredRepos);
   const [activeFilter, setActiveFilter] = useLocalStorage<InboxFilter>(
     'notificationsFilter',
@@ -494,6 +495,27 @@ export function NotificationsPage() {
           </button>
         </div>
       </div>
+
+
+      {/* Partial Errors Warning Banner */}
+      {errors && errors.length > 0 && (
+        <div
+          className="flex items-start gap-3 p-3 rounded-lg mb-4 border"
+          style={{
+            background: 'var(--color-warning-light, rgba(245, 158, 11, 0.08))',
+            borderColor: 'var(--color-warning, #f59e0b)',
+            color: 'var(--color-text-primary)',
+          }}
+        >
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--color-warning)' }} />
+          <div>
+            <div className="text-xs font-semibold">Partial Data Loading Failure</div>
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+              Could not retrieve items from: {errors.join(', ')}. Make sure your GitHub token has the required scopes (e.g. 'notifications', 'repo').
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Filter pills */}
       <div className="flex items-center gap-1 mb-4 overflow-x-auto pb-1">

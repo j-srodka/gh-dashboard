@@ -32,9 +32,7 @@ const NotificationsPage = lazy(() =>
 const InsightsPage = lazy(() =>
   import('./pages/InsightsPage').then((m) => ({ default: m.InsightsPage })),
 );
-const DigestPage = lazy(() =>
-  import('./pages/DigestPage').then((m) => ({ default: m.DigestPage })),
-);
+
 const SecurityPage = lazy(() =>
   import('./pages/SecurityPage').then((m) => ({ default: m.SecurityPage })),
 );
@@ -76,7 +74,7 @@ function App() {
           <Route path="/" element={<OverviewPage />} />
           <Route path="/repositories" element={<RepositoriesPage />} />
           <Route path="/insights" element={<InsightsPage />} />
-          <Route path="/digest" element={<DigestPage />} />
+
           <Route path="/pull-requests" element={<PullRequestsPage />} />
           <Route path="/actions" element={<ActionsPage />} />
           <Route path="/issues" element={<IssuesPage />} />

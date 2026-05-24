@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, Lightbulb, TrendingUp } from 'lucide-react';
+import { Activity, AlertTriangle, Lightbulb, Star } from 'lucide-react';
 import type { RepoInsight } from '@/lib/insights';
 import { HealthPill } from './HealthPill';
 import { LANGUAGE_COLORS } from '@/lib/constants';
@@ -86,7 +86,7 @@ export function InsightCard({ repo, insight, onClick }: InsightCardProps) {
           {insight.daysSincePush <= 1 ? 'Today' : insight.daysSincePush <= 7 ? `${insight.daysSincePush}d ago` : `${insight.daysSincePush}d`}
         </span>
         <span className="flex items-center gap-1">
-          <TrendingUp className="w-3 h-3" />
+          <Star className="w-3 h-3" style={{ color: 'var(--color-warning)' }} />
           {repo.stargazers_count || 0} stars
         </span>
       </div>

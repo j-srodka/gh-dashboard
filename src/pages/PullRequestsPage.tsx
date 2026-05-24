@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { usePullRequests, useReviewRequests, useReviewPullRequest } from '@/hooks/useGitHubQuery';
+import { usePullRequests, useReviewRequests, useReviewPullRequest, useUser } from '@/hooks/useGitHubQuery';
 import { useMonitoredRepos } from '@/hooks/useMonitoredRepos';
 import { useSavedViews, type SavedView } from '@/hooks/useSavedViews';
 import { StatusDot } from '@/components/ui/StatusDot';
@@ -29,8 +29,10 @@ export function PullRequestsPage() {
   const { monitoredRepos } = useMonitoredRepos();
   const { data: prData, isLoading } = usePullRequests(monitoredRepos);
   const { data: reviewData } = useReviewRequests(monitoredRepos);
+  const { data: userData } = useUser();
   const reviewMutation = useReviewPullRequest();
   const [repoFilter, setRepoFilter] = useState<string>('all');
+  const [selectedNewPRRepo, setSelectedNewPRRepo] = useState<string>('');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [preset, setPreset] = useState<Preset>('none');
@@ -64,20 +66,23 @@ export function PullRequestsPage() {
     return combined;
   }, [prData, reviewData]);
 
-  const uniqueRepos = useMemo(() => {
-    const repos = new Set<string>();
-    allPrs.forEach((pr: any) => {
-      const repoName = pr.repository_url?.split('/').pop();
-      if (repoName) repos.add(repoName);
-    });
-    return Array.from(repos).sort();
-  }, [allPrs]);
+
 
   const filteredAndSorted = useMemo(() => {
     let result = [...allPrs];
 
     if (repoFilter !== 'all') {
       result = result.filter((pr: any) => pr.repository_url?.split('/').pop() === repoFilter);
+    }
+
+    if (preset === 'my-prs' && userData?.login) {
+      result = result.filter((pr: any) => pr.user?.login === userData.login);
+    }
+
+    if (preset === 'needs-review') {
+      result = result.filter((pr: any) => {
+        return pr.requested_reviewers?.some((r: any) => r.login === userData?.login);
+      });
     }
 
     if (statusFilter !== 'all') {
@@ -108,28 +113,18 @@ export function PullRequestsPage() {
     });
 
     return result;
-  }, [allPrs, repoFilter, sortBy, statusFilter]);
+  }, [allPrs, repoFilter, sortBy, statusFilter, preset, userData]);
 
-  const handleNewPR = () => {
-    let owner = '';
-    let repo = '';
-    if (monitoredRepos.length > 0) {
-      const parts = monitoredRepos[0].split('/');
-      owner = parts[0];
-      repo = parts[1];
-    } else if (allPrs.length > 0) {
-      const urlParts = allPrs[0].repository_url?.split('/');
-      if (urlParts && urlParts.length >= 2) {
-        owner = urlParts[urlParts.length - 2];
-        repo = urlParts[urlParts.length - 1];
-      }
-    }
+  const handleNewPR = (repoFullName?: string) => {
+    const targetRepo = repoFullName || selectedNewPRRepo || monitoredRepos[0];
+    if (!targetRepo) return;
+    const [owner, repo] = targetRepo.split('/');
     if (owner && repo) {
       window.open(`https://github.com/${owner}/${repo}/compare`, '_blank', 'noopener,noreferrer');
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !prData) {
     return <div className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>Loading...</div>;
   }
 
@@ -148,13 +143,35 @@ export function PullRequestsPage() {
           >
             <Download className="w-3.5 h-3.5" /> Export JSON
           </button>
-          <button
-            onClick={handleNewPR}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white"
-            style={{ background: 'var(--color-brand)' }}
-          >
-            <GitPullRequest className="w-4 h-4" /> New PR
-          </button>
+          {monitoredRepos.length > 1 ? (
+            <div className="flex items-center gap-1">
+              <select
+                value={selectedNewPRRepo || monitoredRepos[0]}
+                onChange={(e) => setSelectedNewPRRepo(e.target.value)}
+                className="rounded-lg border px-2.5 py-1.5 text-xs outline-none focus:border-blue-400"
+                style={{ background: 'var(--color-surface-secondary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
+              >
+                {monitoredRepos.map((r) => (
+                  <option key={r} value={r}>{r.split('/').pop()}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => handleNewPR()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:opacity-90"
+                style={{ background: 'var(--color-brand)' }}
+              >
+                <GitPullRequest className="w-4 h-4" /> New PR
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => handleNewPR(monitoredRepos[0])}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:opacity-90"
+              style={{ background: 'var(--color-brand)' }}
+            >
+              <GitPullRequest className="w-4 h-4" /> New PR
+            </button>
+          )}
         </div>
       </div>
 
@@ -215,17 +232,7 @@ export function PullRequestsPage() {
               style={{ background: 'var(--color-surface-secondary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
             />
           </div>
-          <select
-            value={repoFilter}
-            onChange={(e) => setRepoFilter(e.target.value)}
-            className="min-w-[160px] rounded-lg border px-3 py-2 text-sm outline-none"
-            style={{ background: 'var(--color-surface-secondary)', borderColor: 'var(--color-border)', color: 'var(--color-text-primary)' }}
-          >
-            <option value="all">All Repositories</option>
-            {uniqueRepos.map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
+
           <select
             value={sortBy}
             onChange={(e) => { setSortBy(e.target.value as SortOption); setPreset('none'); }}
