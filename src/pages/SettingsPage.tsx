@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { useAIAsk } from '@/hooks/useAIAsk';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useRepos, useUser } from '@/hooks/useGitHubQuery';
 import { useMonitoredRepos } from '@/hooks/useMonitoredRepos';
 import { useAccount } from '@/contexts/AccountContext';
 import { LANGUAGE_COLORS } from '@/lib/constants';
-import { Monitor, Sun, Moon, Users, Bell, BellOff, AlertCircle } from 'lucide-react';
+import { Monitor, Sun, Moon, Users, Bell, BellOff, AlertCircle, Bot, Loader2 } from 'lucide-react';
 
 function getNotificationPermission(): NotificationPermission | 'unsupported' {
   if (typeof Notification === 'undefined') return 'unsupported';
@@ -34,6 +35,102 @@ function Toggle({ checked, onChange, ariaLabel }: { checked: boolean; onChange: 
         style={{ transform: checked ? 'translateX(1.25rem)' : '' }}
       />
     </button>
+  );
+}
+
+function AIAssistantCard({ aiAgent }: { aiAgent: string }) {
+  const [input, setInput] = useState('');
+  const [history, setHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+  const askMutation = useAIAsk();
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  const handleSubmit = async () => {
+    const q = input.trim();
+    if (!q || askMutation.isPending) return;
+    setInput('');
+    setHistory((prev) => [...prev, { role: 'user', content: q }]);
+    try {
+      const result = await askMutation.mutateAsync(q);
+      setHistory((prev) => [...prev, { role: 'assistant', content: result.response || result.error || 'No response' }]);
+    } catch {
+      setHistory((prev) => [...prev, { role: 'assistant', content: 'Request failed. Check the server is running.' }]);
+    }
+  };
+
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [history]);
+
+  const isInstalled = AGENT_OPTIONS.some((o) => o.value === aiAgent || (aiAgent === 'auto' && o.value !== 'auto'));
+
+  return (
+    <div className="rounded-xl border p-6 mb-4" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+      <div className="flex items-center gap-2 mb-3">
+        <Bot className="w-4 h-4" style={{ color: 'var(--color-brand)' }} />
+        <h2 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>AI Assistant</h2>
+        {askMutation.isPending && (
+          <Loader2 className="w-3.5 h-3.5 animate-spin ml-auto" style={{ color: 'var(--color-brand)' }} />
+        )}
+      </div>
+      <p className="text-xs mb-3" style={{ color: 'var(--color-text-tertiary)' }}>
+        Ask questions about your dashboard — PR summaries, repo insights, or anything else.
+        {!isInstalled && ' Install an agent CLI (opencode, claude, cursor, codex, copilot) and select it above.'}
+      </p>
+
+      {/* Chat history */}
+      <div className="max-h-64 overflow-y-auto space-y-2 mb-3 pr-1">
+        {history.length === 0 && (
+          <div className="text-xs py-4 text-center" style={{ color: 'var(--color-text-tertiary)' }}>
+            {askMutation.isPending ? 'Thinking...' : 'Ask a question to get started.'}
+          </div>
+        )}
+        {history.map((msg, i) => (
+          <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+            <div
+              className={`max-w-[85%] rounded-lg px-3 py-2 text-xs leading-relaxed ${
+                msg.role === 'user'
+                  ? 'rounded-br-sm'
+                  : 'rounded-bl-sm'
+              }`}
+              style={{
+                background: msg.role === 'user' ? 'var(--color-brand)' : 'var(--color-surface-tertiary)',
+                color: msg.role === 'user' ? '#fff' : 'var(--color-text-primary)',
+              }}
+            >
+              <pre className="whitespace-pre-wrap font-sans break-words m-0">{msg.content}</pre>
+            </div>
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
+          placeholder="Type a question..."
+          disabled={askMutation.isPending}
+          className="flex-1 min-w-0 rounded-lg border px-3 py-2 text-xs outline-none disabled:opacity-50"
+          style={{
+            background: 'var(--color-surface-secondary)',
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text-primary)',
+          }}
+        />
+        <button
+          onClick={handleSubmit}
+          disabled={!input.trim() || askMutation.isPending}
+          className="px-3 py-2 rounded-lg text-xs font-medium transition-opacity disabled:opacity-40"
+          style={{ background: 'var(--color-brand)', color: '#fff' }}
+        >
+          Send
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -186,6 +283,9 @@ export function SettingsPage() {
           ))}
         </div>
       </div>
+
+      {/* AI Assistant — chat with your dashboard data */}
+      <AIAssistantCard aiAgent={aiAgent} />
 
       <div className="rounded-xl border p-6 mb-4" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
         <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>Notifications</h2>

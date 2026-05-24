@@ -322,7 +322,7 @@ export function Layout({ children }: LayoutProps) {
                     {allRepos.map((repo: string) => (
                       <button
                         key={repo}
-                        onClick={() => toggleRepo(repo)}
+                        onClick={() => { toggleRepo(repo); setRepoFilterOpen(false); }}
                         className="flex items-center justify-between w-full px-2.5 py-1.5 rounded-md text-xs transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/50"
                         style={{ color: 'var(--color-text-secondary)' }}
                       >

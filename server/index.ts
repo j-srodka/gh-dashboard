@@ -4,7 +4,7 @@ import { getGitHubToken } from './auth.js';
 import { recordSnapshot, getSnapshots } from './snapshots.js';
 import { computeDigest } from './digests.js';
 import { initAccounts, getAccounts, getTokenForAccount } from './accountStore.js';
-import { diagnoseWorkflowFailure } from './ai-troubleshooter.js';
+import { diagnoseWorkflowFailure, askAI } from './ai-troubleshooter.js';
 import { computeMetrics } from './metrics.js';
 
 const app = Fastify({ logger: true });
@@ -64,6 +64,23 @@ app.post('/api/ai/diagnose', async (request, reply) => {
     agentCli: body.agentCli,
   });
 
+  reply.send(result);
+});
+
+// POST /api/ai/ask — general-purpose AI query via configured agent CLI
+app.post('/api/ai/ask', async (request, reply) => {
+  const body = request.body as { prompt?: string; agentCli?: string };
+
+  if (!body?.prompt || typeof body.prompt !== 'string' || body.prompt.trim().length === 0) {
+    reply.code(400).send({ error: 'prompt is required' });
+    return;
+  }
+  if (body.prompt.length > 10_000) {
+    reply.code(400).send({ error: 'prompt too long (max 10,000 characters)' });
+    return;
+  }
+
+  const result = await askAI({ prompt: body.prompt.trim(), agentCli: body.agentCli });
   reply.send(result);
 });
 

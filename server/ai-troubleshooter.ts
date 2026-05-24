@@ -15,7 +15,7 @@ const DIAGNOSE_TIMEOUT_MS = 90_000;
 const AGENT_CLIS: Record<string, { binary: string; args: (prompt: string) => string[] }> = {
   opencode: {
     binary: 'opencode',
-    args: (prompt) => [prompt],
+    args: (prompt) => ['run', prompt],
   },
   'claude-code': {
     binary: 'claude',
@@ -169,6 +169,71 @@ SUGGESTED FIX:
  * Diagnose a failed workflow run by fetching its logs and analyzing
  * them with the user's preferred agent CLI.
  */
+export interface AskRequest {
+  prompt: string;
+  agentCli?: string;
+}
+
+export interface AskResult {
+  response: string;
+  error?: string;
+  agentUsed?: string;
+}
+
+/** Run a general-purpose prompt through the configured agent CLI. */
+export async function askAI(req: AskRequest): Promise<AskResult> {
+  const agent = detectAgentCli(req.agentCli);
+  if (!agent) {
+    return {
+      response: '',
+      error:
+        'No AI agent CLI found on your system. Install one of: opencode, claude-code (claude), cursor, codex, or GitHub Copilot CLI.',
+    };
+  }
+
+  try {
+    if (!Object.hasOwn(AGENT_CLIS, agent.name)) {
+      throw new Error(`Unknown agent CLI: ${agent.name}`);
+    }
+    const cliConfig = AGENT_CLIS[agent.name];
+    const args = cliConfig.args(req.prompt);
+
+    console.log(`[ai-ask] Running: ${cliConfig.binary} ${args[0]?.slice(0, 120)}...`);
+
+    const result = spawnSync(cliConfig.binary, args, {
+      timeout: 60_000,
+      maxBuffer: 50 * 1024 * 1024,
+      encoding: 'utf8',
+      stdio: 'pipe',
+      shell: false,
+      env: { ...process.env, GITHUB_TOKEN: undefined, GH_TOKEN: undefined },
+    });
+
+    if (result.error) throw result.error;
+
+    if (result.status !== 0) {
+      const err: any = new Error(`${cliConfig.binary} exited with code ${result.status}`);
+      err.stderr = result.stderr || '';
+      throw err;
+    }
+
+    const output = (result.stdout || '').trim();
+    return { response: output, agentUsed: agent.name };
+  } catch (err: any) {
+    const rawStderr = err.stderr || '';
+    const sanitizedStderr = redactSecrets(rawStderr);
+    const message = err.errno === 'ENOENT'
+      ? `Agent '${err.path || agent.name}' is not installed on your system.`
+      : `Agent CLI '${agent.name}' failed: ${err.message || 'Unknown error'}`;
+
+    return {
+      response: '',
+      error: message + (sanitizedStderr ? `\n\nStderr:\n${sanitizedStderr.slice(0, 500)}` : ''),
+      agentUsed: agent.name,
+    };
+  }
+}
+
 export async function diagnoseWorkflowFailure(
   req: DiagnoseRequest
 ): Promise<DiagnoseResult> {
