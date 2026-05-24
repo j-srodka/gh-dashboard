@@ -18,6 +18,8 @@ export interface MetricPeriod {
   deploymentFrequency: MetricValue;
   meanTimeToRecovery: MetricValue;
   changeFailureRate: MetricValue;
+  pipelineDuration: MetricValue;
+  issueResolutionTime: MetricValue;
 }
 
 export interface MetricsResult {
@@ -189,8 +191,8 @@ async function computeDeploymentFrequency(
     const data = await githubFetch(
       token,
       `repos/${owner}/${repo}/releases?per_page=100`,
-    );
-    const releases = (data || []) as any[];
+    ).catch(() => []);
+    const releases = (Array.isArray(data) ? data : []) as any[];
     const recentReleases = releases.filter((r: any) => {
       const published = new Date(r.published_at || r.created_at);
       if (until) {
@@ -199,23 +201,35 @@ async function computeDeploymentFrequency(
       return published >= since;
     });
 
-    if (releases.length === 0) {
-      return { value: null, label: 'No releases found' };
+    if (recentReleases.length > 0) {
+      // Deployments per day based on releases
+      const freq = recentReleases.length / periodDays;
+      return {
+        value: Math.round(freq * 100) / 100,
+        label: `${recentReleases.length} release${recentReleases.length === 1 ? '' : 's'}`,
+      };
     }
 
-    if (recentReleases.length === 0) {
-      return { value: null, label: `No releases in last ${periodDays} days` };
+    // Fallback: Default branch commits (merge/push events proxy)
+    const sinceStr = isoDate(since);
+    let commitsPath = `repos/${owner}/${repo}/commits?since=${sinceStr}&per_page=100`;
+    if (until) {
+      commitsPath += `&until=${isoDate(until)}`;
+    }
+    const commitsData = await githubFetch(token, commitsPath).catch(() => []);
+    const commits = Array.isArray(commitsData) ? commitsData : [];
+
+    if (commits.length > 0) {
+      const freq = commits.length / periodDays;
+      return {
+        value: Math.round(freq * 100) / 100,
+        label: `${commits.length} commit${commits.length === 1 ? '' : 's'} (fallback)`,
+      };
     }
 
-    // Deployments per day
-    const freq = recentReleases.length / periodDays;
-
-    return {
-      value: Math.round(freq * 100) / 100,
-      label: `${recentReleases.length} release${recentReleases.length === 1 ? '' : 's'}`,
-    };
+    return { value: null, label: 'No releases or commits in period' };
   } catch {
-    return { value: null, label: 'Unable to fetch releases' };
+    return { value: null, label: 'Unable to fetch releases or commits' };
   }
 }
 
@@ -226,12 +240,12 @@ async function computeWorkflowMetrics(
   repo: string,
   since: Date,
   until?: Date,
-): Promise<{ mttr: MetricValue; cfr: MetricValue }> {
+): Promise<{ mttr: MetricValue; cfr: MetricValue; pipelineDuration: MetricValue }> {
   try {
     const data = await githubFetch(
       token,
       `repos/${owner}/${repo}/actions/runs?per_page=100`,
-    );
+    ).catch(() => ({ workflow_runs: [] }));
     const runs = (data.workflow_runs || []) as any[];
 
     // Filter to runs within period
@@ -247,11 +261,26 @@ async function computeWorkflowMetrics(
       return {
         mttr: { value: null, label: 'No workflow runs in period' },
         cfr: { value: null, label: 'No workflow runs in period' },
+        pipelineDuration: { value: null, label: 'No workflow runs in period' },
       };
     }
 
-    // ── Change Failure Rate ──
     const completed = periodRuns.filter((r: any) => r.conclusion);
+
+    // ── Pipeline Duration ──
+    const durations = completed
+      .filter((r: any) => r.created_at && r.updated_at)
+      .map((r: any) => {
+        const ms = new Date(r.updated_at).getTime() - new Date(r.created_at).getTime();
+        return Math.max(1, Math.round(ms / 60000)); // in minutes
+      });
+    const avgDuration = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length * 10) / 10 : null;
+    const pipelineDuration: MetricValue = {
+      value: avgDuration,
+      label: avgDuration !== null ? `${completed.length} run${completed.length === 1 ? '' : 's'} averaged` : 'No completed run timings',
+    };
+
+    // ── Change Failure Rate ──
     const failures = completed.filter(
       (r: any) => r.conclusion === 'failure',
     );
@@ -262,7 +291,7 @@ async function computeWorkflowMetrics(
 
     const cfr: MetricValue = {
       value: cfrValue,
-      label: `${failures.length} failure${failures.length === 1 ? '' : 's'} / ${completed.length} runs`,
+      label: `${failures.length} failure${failures.length === 1 ? '' : 's'} / ${completed.length} run${completed.length === 1 ? '' : 's'}`,
     };
 
     // ── MTTR ──
@@ -303,25 +332,67 @@ async function computeWorkflowMetrics(
       }
     }
 
-    const mttr: MetricValue =
-      recoveryHours.length > 0
-        ? {
-            value:
-              Math.round(
-                (recoveryHours.reduce((a, b) => a + b, 0) /
-                  recoveryHours.length) *
-                  10,
-              ) / 10,
-            label: `${recoveryHours.length} recovery event${recoveryHours.length === 1 ? '' : 's'}`,
-          }
-        : { value: null, label: 'No failure→success transitions found' };
+    let mttr: MetricValue;
+    if (recoveryHours.length > 0) {
+      const avg = recoveryHours.reduce((a, b) => a + b, 0) / recoveryHours.length;
+      mttr = {
+        value: Math.round(avg * 10) / 10,
+        label: `${recoveryHours.length} recovery event${recoveryHours.length === 1 ? '' : 's'}`,
+      };
+    } else if (failures.length === 0 && completed.length > 0) {
+      mttr = { value: 0, label: '0 failures (Healthy)' };
+    } else {
+      mttr = { value: null, label: 'No failure→success transitions' };
+    }
 
-    return { mttr, cfr };
+    return { mttr, cfr, pipelineDuration };
   } catch {
     return {
       mttr: { value: null, label: 'Unable to fetch workflow data' },
       cfr: { value: null, label: 'Unable to fetch workflow data' },
+      pipelineDuration: { value: null, label: 'Unable to fetch workflow data' },
     };
+  }
+}
+
+// ── Issue Resolution MTTR ───────────────────────────────────────────────
+async function computeIssueResolutionTime(
+  token: string,
+  owner: string,
+  repo: string,
+  since: Date,
+  until?: Date,
+): Promise<MetricValue> {
+  try {
+    const sinceStr = isoDate(since);
+    let q = `is:issue+is:closed+repo:${owner}/${repo}+closed:>=${sinceStr}`;
+    if (until) {
+      const untilStr = isoDate(until);
+      q += `+closed:<${untilStr}`;
+    }
+    const data = await githubFetch(
+      token,
+      `search/issues?q=${encodeURIComponent(q)}&sort=created&order=desc&per_page=100`,
+    ).catch(() => ({ items: [] }));
+
+    const items = (data.items || []) as any[];
+    const closedIssues = items.filter((item: any) => !item.pull_request && item.closed_at);
+
+    if (closedIssues.length === 0) {
+      return { value: null, label: 'No closed issues in period' };
+    }
+
+    const resolutionTimes = closedIssues.map((issue: any) =>
+      hoursBetween(issue.created_at, issue.closed_at),
+    );
+    const avg = resolutionTimes.reduce((a, b) => a + b, 0) / resolutionTimes.length;
+
+    return {
+      value: Math.round(avg * 10) / 10,
+      label: `${closedIssues.length} closed issue${closedIssues.length === 1 ? '' : 's'}`,
+    };
+  } catch {
+    return { value: null, label: 'Unable to fetch issue data' };
   }
 }
 
@@ -341,16 +412,17 @@ export async function computeMetrics(
   const insufficientData: string[] = [];
 
   // Compute current period metrics
-  const [prCycleCurrent, reviewCurrent, deployCurrent, wfMetricsCurrent] =
+  const [prCycleCurrent, reviewCurrent, deployCurrent, wfMetricsCurrent, issueResolutionCurrent] =
     await Promise.all([
       computePRCycleTime(token, owner, repo, currentSince),
       computeReviewTurnaround(token, owner, repo, currentSince),
       computeDeploymentFrequency(token, owner, repo, periodDays, currentSince),
       computeWorkflowMetrics(token, owner, repo, currentSince),
+      computeIssueResolutionTime(token, owner, repo, currentSince),
     ]);
 
   // Compute previous period metrics
-  const [prCyclePrev, reviewPrev, deployPrev, wfMetricsPrev] =
+  const [prCyclePrev, reviewPrev, deployPrev, wfMetricsPrev, issueResolutionPrev] =
     await Promise.all([
       computePRCycleTime(token, owner, repo, previousSince, previousUntil),
       computeReviewTurnaround(token, owner, repo, previousSince, previousUntil),
@@ -363,6 +435,7 @@ export async function computeMetrics(
         previousUntil,
       ),
       computeWorkflowMetrics(token, owner, repo, previousSince, previousUntil),
+      computeIssueResolutionTime(token, owner, repo, previousSince, previousUntil),
     ]);
 
   // Build metric period objects
@@ -372,6 +445,8 @@ export async function computeMetrics(
     deploymentFrequency: deployCurrent,
     meanTimeToRecovery: wfMetricsCurrent.mttr,
     changeFailureRate: wfMetricsCurrent.cfr,
+    pipelineDuration: wfMetricsCurrent.pipelineDuration,
+    issueResolutionTime: issueResolutionCurrent,
   };
 
   const previous: MetricPeriod = {
@@ -380,6 +455,8 @@ export async function computeMetrics(
     deploymentFrequency: deployPrev,
     meanTimeToRecovery: wfMetricsPrev.mttr,
     changeFailureRate: wfMetricsPrev.cfr,
+    pipelineDuration: wfMetricsPrev.pipelineDuration,
+    issueResolutionTime: issueResolutionPrev,
   };
 
   // Collect insufficient data messages
@@ -389,6 +466,8 @@ export async function computeMetrics(
     'deploymentFrequency',
     'meanTimeToRecovery',
     'changeFailureRate',
+    'pipelineDuration',
+    'issueResolutionTime',
   ];
 
   for (const name of metricNames) {

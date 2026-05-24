@@ -267,6 +267,8 @@ export interface MetricPeriod {
   deploymentFrequency: MetricValue;
   meanTimeToRecovery: MetricValue;
   changeFailureRate: MetricValue;
+  pipelineDuration: MetricValue;
+  issueResolutionTime: MetricValue;
 }
 
 export interface EngineeringMetrics {
