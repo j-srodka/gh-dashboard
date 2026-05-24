@@ -2,12 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   useRepos,
-  useIsRepoStarred,
-  useIsRepoWatched,
-  useStarRepo,
-  useUnstarRepo,
-  useWatchRepo,
-  useUnwatchRepo,
 } from '@/hooks/useGitHubQuery';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useMonitoredRepos } from '@/hooks/useMonitoredRepos';
@@ -17,13 +11,10 @@ import { LANGUAGE_COLORS } from '@/lib/constants';
 import {
   Pin,
   FolderGit2,
-  Star,
   Zap,
-  Eye,
   GitPullRequest,
   CircleDot,
   PlayCircle,
-  Loader2,
 } from 'lucide-react';
 
 function RepoCard({
@@ -41,38 +32,7 @@ function RepoCard({
   const [owner, repoName] = repo.full_name.split('/');
   const color = LANGUAGE_COLORS[repo.language] || '#94a3b8';
 
-  // Star state
-  const { data: isStarred, isLoading: starLoading } = useIsRepoStarred(owner, repoName);
-  const starRepo = useStarRepo();
-  const unstarRepo = useUnstarRepo();
 
-  // Watch state
-  const { data: isWatched, isLoading: watchLoading } = useIsRepoWatched(owner, repoName);
-  const watchRepo = useWatchRepo();
-  const unwatchRepo = useUnwatchRepo();
-
-  const handleStar = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (starRepo.isPending || unstarRepo.isPending) return;
-    if (isStarred) {
-      unstarRepo.mutate({ owner, repo: repoName });
-    } else {
-      starRepo.mutate({ owner, repo: repoName });
-    }
-  };
-
-  const handleWatch = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (watchRepo.isPending || unwatchRepo.isPending) return;
-    if (isWatched) {
-      unwatchRepo.mutate({ owner, repo: repoName });
-    } else {
-      watchRepo.mutate({ owner, repo: repoName });
-    }
-  };
-
-  const starPending = starRepo.isPending || unstarRepo.isPending;
-  const watchPending = watchRepo.isPending || unwatchRepo.isPending;
 
   return (
     <div
@@ -86,34 +46,6 @@ function RepoCard({
           <span className="font-semibold text-sm truncate" style={{ color: 'var(--color-brand)' }}>{repo.name}</span>
         </div>
         <div className="flex items-center gap-1">
-          {/* Star toggle */}
-          <button
-            onClick={handleStar}
-            disabled={starPending || starLoading}
-            className={`p-1 rounded-md transition-all ${isStarred ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-            style={{ color: isStarred ? 'var(--color-warning)' : 'var(--color-text-tertiary)' }}
-            title={isStarred ? 'Unstar repository' : 'Star repository'}
-          >
-            {starPending ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Star className="w-3.5 h-3.5" fill={isStarred ? 'currentColor' : 'none'} />
-            )}
-          </button>
-          {/* Watch toggle */}
-          <button
-            onClick={handleWatch}
-            disabled={watchPending || watchLoading}
-            className={`p-1 rounded-md transition-all ${isWatched ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-            style={{ color: isWatched ? 'var(--color-info)' : 'var(--color-text-tertiary)' }}
-            title={isWatched ? 'Unwatch repository' : 'Watch repository'}
-          >
-            {watchPending ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Eye className="w-3.5 h-3.5" />
-            )}
-          </button>
           {/* Pin */}
           <button
             onClick={(e) => { e.stopPropagation(); onTogglePin(); }}
@@ -133,9 +65,7 @@ function RepoCard({
             {repo.language}
           </span>
         )}
-        <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-          <Star className="w-3 h-3" />{repo.stargazers_count || 0}
-        </span>
+
         <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
           {repo.updated_at ? new Date(repo.updated_at).toLocaleDateString() : 'N/A'}
         </span>

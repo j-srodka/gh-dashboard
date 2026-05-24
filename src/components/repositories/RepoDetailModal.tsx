@@ -8,12 +8,6 @@ import {
   useTrafficViews,
   useDependents,
   useMentions,
-  useIsRepoStarred,
-  useIsRepoWatched,
-  useStarRepo,
-  useUnstarRepo,
-  useWatchRepo,
-  useUnwatchRepo,
 } from '@/hooks/useGitHubQuery';
 import { LANGUAGE_COLORS } from '@/lib/constants';
 import {
@@ -33,7 +27,6 @@ import {
   Clock,
   Package,
   MessageSquare,
-  Loader2,
 } from 'lucide-react';
 
 interface RepoDetailModalProps {
@@ -60,37 +53,6 @@ export function RepoDetailModal({ repo, isOpen, onClose }: RepoDetailModalProps)
   if (!isOpen || !repo) return null;
 
   const [owner, repoName] = repo.full_name.split('/');
-
-  // Star state
-  const { data: isStarred, isLoading: starLoading } = useIsRepoStarred(owner, repoName);
-  const starRepo = useStarRepo();
-  const unstarRepo = useUnstarRepo();
-
-  // Watch state
-  const { data: isWatched, isLoading: watchLoading } = useIsRepoWatched(owner, repoName);
-  const watchRepo = useWatchRepo();
-  const unwatchRepo = useUnwatchRepo();
-
-  const handleStar = () => {
-    if (starRepo.isPending || unstarRepo.isPending) return;
-    if (isStarred) {
-      unstarRepo.mutate({ owner, repo: repoName });
-    } else {
-      starRepo.mutate({ owner, repo: repoName });
-    }
-  };
-
-  const handleWatch = () => {
-    if (watchRepo.isPending || unwatchRepo.isPending) return;
-    if (isWatched) {
-      unwatchRepo.mutate({ owner, repo: repoName });
-    } else {
-      watchRepo.mutate({ owner, repo: repoName });
-    }
-  };
-
-  const starPending = starRepo.isPending || unstarRepo.isPending;
-  const watchPending = watchRepo.isPending || unwatchRepo.isPending;
 
   return (
     <div
@@ -122,36 +84,7 @@ export function RepoDetailModal({ repo, isOpen, onClose }: RepoDetailModalProps)
             </div>
           </div>
           <div className="flex items-center gap-1">
-            {/* Star toggle */}
-            <button
-              onClick={handleStar}
-              disabled={starPending || starLoading}
-              className="p-2 rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
-              style={{ color: isStarred ? 'var(--color-warning)' : 'var(--color-text-tertiary)' }}
-              title={isStarred ? 'Unstar repository' : 'Star repository'}
-              aria-label={isStarred ? 'Unstar repository' : 'Star repository'}
-            >
-              {starPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Star className="w-4 h-4" fill={isStarred ? 'currentColor' : 'none'} />
-              )}
-            </button>
-            {/* Watch toggle */}
-            <button
-              onClick={handleWatch}
-              disabled={watchPending || watchLoading}
-              className="p-2 rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
-              style={{ color: isWatched ? 'var(--color-info)' : 'var(--color-text-tertiary)' }}
-              title={isWatched ? 'Unwatch repository' : 'Watch repository'}
-              aria-label={isWatched ? 'Unwatch repository' : 'Watch repository'}
-            >
-              {watchPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Eye className="w-4 h-4" />
-              )}
-            </button>
+
             {/* Quick PR */}
             <a
               href={`https://github.com/${owner}/${repoName}/compare`}
@@ -230,9 +163,7 @@ function OverviewTab({ repo }: { repo: any }) {
   const openIssuesCount = realIssues.length;
 
   const stats = [
-    { icon: Star, label: 'Stars', value: repo.stargazers_count || 0 },
     { icon: GitFork, label: 'Forks', value: repo.forks_count || 0 },
-    { icon: Eye, label: 'Watchers', value: repo.watchers_count || 0 },
     { icon: CircleDot, label: 'Open Issues', value: openIssuesCount },
   ];
 
@@ -257,7 +188,7 @@ function OverviewTab({ repo }: { repo: any }) {
   return (
     <div className="space-y-6">
       {/* Stats row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         {stats.map((s) => (
           <div
             key={s.label}

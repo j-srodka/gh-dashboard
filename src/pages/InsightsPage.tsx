@@ -8,7 +8,6 @@ import { RepoDetailModal } from '@/components/repositories/RepoDetailModal';
 import { StatCard } from '@/components/ui/StatCard';
 import {
   Activity,
-  AlertTriangle,
   Filter,
   ChevronDown,
   GitPullRequest,
@@ -17,6 +16,8 @@ import {
   Timer,
   Percent,
   BarChart3,
+  Clock,
+  CircleDot,
 } from 'lucide-react';
 import type { MetricValue } from '@/lib/insights';
 
@@ -128,6 +129,8 @@ export function InsightsPage() {
         deploymentFrequency: { trend: '—', trendUp: true, trendColor: 'var(--color-text-tertiary)' },
         meanTimeToRecovery: { trend: '—', trendUp: true, trendColor: 'var(--color-text-tertiary)' },
         changeFailureRate: { trend: '—', trendUp: true, trendColor: 'var(--color-text-tertiary)' },
+        pipelineDuration: { trend: '—', trendUp: true, trendColor: 'var(--color-text-tertiary)' },
+        issueResolutionTime: { trend: '—', trendUp: true, trendColor: 'var(--color-text-tertiary)' },
       };
     }
     const { current, previous } = metricsData;
@@ -137,6 +140,8 @@ export function InsightsPage() {
       deploymentFrequency: formatTrend(current.deploymentFrequency, previous.deploymentFrequency, '/d', false),
       meanTimeToRecovery: formatTrend(current.meanTimeToRecovery, previous.meanTimeToRecovery, 'h', true),
       changeFailureRate: formatTrend(current.changeFailureRate, previous.changeFailureRate, '%', true),
+      pipelineDuration: formatTrend(current.pipelineDuration, previous.pipelineDuration, 'm', true),
+      issueResolutionTime: formatTrend(current.issueResolutionTime, previous.issueResolutionTime, 'h', true),
     };
   }, [metricsData]);
 
@@ -361,6 +366,7 @@ export function InsightsPage() {
                   trend={trends.prCycleTime.trend}
                   trendUp={trends.prCycleTime.trendUp}
                   trendColor={trends.prCycleTime.trendColor}
+                  description={`Average days between PR creation and merge. Personal repositories or trunk-based development with direct commits show N/A. Detail: ${metricsData.current.prCycleTime.label}`}
                 />
 
                 {/* Review Turnaround */}
@@ -371,6 +377,7 @@ export function InsightsPage() {
                   trend={trends.reviewTurnaround.trend}
                   trendUp={trends.reviewTurnaround.trendUp}
                   trendColor={trends.reviewTurnaround.trendColor}
+                  description={`Average hours between PR creation and first approval. Personal repositories show N/A. Detail: ${metricsData.current.reviewTurnaround.label}`}
                 />
 
                 {/* Deployment Frequency */}
@@ -381,16 +388,18 @@ export function InsightsPage() {
                   trend={trends.deploymentFrequency.trend}
                   trendUp={trends.deploymentFrequency.trendUp}
                   trendColor={trends.deploymentFrequency.trendColor}
+                  description={`Frequency of deployments. Measures releases, or falls back to default branch commits as a proxy if releases are empty. Detail: ${metricsData.current.deploymentFrequency.label}`}
                 />
 
-                {/* MTTR */}
+                {/* Pipeline Duration */}
                 <StatCard
-                  icon={Timer}
-                  label="Mean Time to Recovery"
-                  value={formatMetricValue(metricsData.current.meanTimeToRecovery.value, ' hours')}
-                  trend={trends.meanTimeToRecovery.trend}
-                  trendUp={trends.meanTimeToRecovery.trendUp}
-                  trendColor={trends.meanTimeToRecovery.trendColor}
+                  icon={Clock}
+                  label="Pipeline Duration"
+                  value={formatMetricValue(metricsData.current.pipelineDuration.value, ' min')}
+                  trend={trends.pipelineDuration.trend}
+                  trendUp={trends.pipelineDuration.trendUp}
+                  trendColor={trends.pipelineDuration.trendColor}
+                  description={`Average execution time of completed GitHub Action runs. Detail: ${metricsData.current.pipelineDuration.label}`}
                 />
 
                 {/* Change Failure Rate */}
@@ -401,53 +410,30 @@ export function InsightsPage() {
                   trend={trends.changeFailureRate.trend}
                   trendUp={trends.changeFailureRate.trendUp}
                   trendColor={trends.changeFailureRate.trendColor}
+                  description={`Percentage of completed workflow runs that failed. Detail: ${metricsData.current.changeFailureRate.label}`}
                 />
-              </div>
 
-              {/* Insufficient data warnings */}
-              {metricsData.insufficientData.length > 0 && (
-                <div
-                  className="rounded-xl border p-4"
-                  style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="w-4 h-4" style={{ color: 'var(--color-warning)' }} />
-                    <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                      Insufficient Data
-                    </span>
-                  </div>
-                  <ul className="space-y-1">
-                    {metricsData.insufficientData.map((msg, i) => (
-                      <li key={i} className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                        {msg}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                {/* MTTR */}
+                <StatCard
+                  icon={Timer}
+                  label="Mean Time to Recovery"
+                  value={formatMetricValue(metricsData.current.meanTimeToRecovery.value, ' hours')}
+                  trend={trends.meanTimeToRecovery.trend}
+                  trendUp={trends.meanTimeToRecovery.trendUp}
+                  trendColor={trends.meanTimeToRecovery.trendColor}
+                  description={`Average hours to fix a failing workflow. Shows 0 (Healthy) if there are no failures. Detail: ${metricsData.current.meanTimeToRecovery.label}`}
+                />
 
-              {/* Metric detail labels */}
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                {([
-                  { key: 'prCycleTime', name: 'PR Cycle Time', detail: metricsData.current.prCycleTime.label },
-                  { key: 'reviewTurnaround', name: 'Review Turnaround', detail: metricsData.current.reviewTurnaround.label },
-                  { key: 'deploymentFrequency', name: 'Deployment Frequency', detail: metricsData.current.deploymentFrequency.label },
-                  { key: 'meanTimeToRecovery', name: 'MTTR', detail: metricsData.current.meanTimeToRecovery.label },
-                  { key: 'changeFailureRate', name: 'Change Failure Rate', detail: metricsData.current.changeFailureRate.label },
-                ] as const).map(({ key, name, detail }) => (
-                  <div
-                    key={key}
-                    className="rounded-lg border px-3 py-2"
-                    style={{ background: 'var(--color-surface-tertiary)', borderColor: 'var(--color-border)' }}
-                  >
-                    <span className="text-[10px] font-medium block" style={{ color: 'var(--color-text-tertiary)' }}>
-                      {name}
-                    </span>
-                    <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                      {detail}
-                    </span>
-                  </div>
-                ))}
+                {/* Issue Resolution MTTR */}
+                <StatCard
+                  icon={CircleDot}
+                  label="Issue Resolution MTTR"
+                  value={formatMetricValue(metricsData.current.issueResolutionTime.value, ' hours')}
+                  trend={trends.issueResolutionTime.trend}
+                  trendUp={trends.issueResolutionTime.trendUp}
+                  trendColor={trends.issueResolutionTime.trendColor}
+                  description={`Average hours to resolve and close incident reports and bugs tracked in issues. Detail: ${metricsData.current.issueResolutionTime.label}`}
+                />
               </div>
             </>
           )}
