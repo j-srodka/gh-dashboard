@@ -11,14 +11,15 @@ npm run dev        # Starts Vite dev server + Fastify proxy concurrently
 
 ## Architecture Overview
 
-Personal GitHub dashboard. React 19 + TypeScript + Vite frontend. TanStack Query for GitHub API data. Fastify proxy server reads gh auth token server-side. shadcn/ui + Tailwind CSS components.
+Personal GitHub dashboard. React 19 + TypeScript + Vite frontend. TanStack Query for all GitHub API data. Fastify proxy server reads gh auth token server-side. Tailwind CSS v4 for styling.
 
 ## Conventions & Patterns
 
 - Use TypeScript strictly. Prefer explicit types over inference for public APIs.
 - Use TanStack Query for all remote data. Set appropriate staleTime and refetchInterval.
-- Use shadcn/ui components from the registry. Customize via Tailwind, not by forking.
+- Custom UI components in `src/components/ui/` — no external component library.
 - Server-side proxy handles all GitHub API auth. Frontend never sees tokens.
+- Pages in `src/pages/`, hooks in `src/hooks/`, shared lib in `src/lib/`.
 
 ---
 
@@ -46,6 +47,8 @@ bd close <id>         # Complete work
 
 This project uses **Hindsight** for persistent long-term agent memory.
 
+> Hindsight server must be running on `localhost:8888`. Start with `./scripts/start-hindsight.sh` or `hindsight server start`.
+
 ### Session Start (MANDATORY)
 
 Recall relevant memories before starting work:
@@ -63,7 +66,8 @@ Or via the MCP tool if available:
 Retain durable learnings:
 
 ```bash
-hindsight memory retain gh-dashboard "Architecture decision: chose Fastify over Express for streaming support. Rationale: native async/await, better middleware composition."
+hindsight memory retain gh-dashboard "Decision: <what> Rationale: <why>"
+hindsight memory retain jake-preferences "Jake preference: <topic>"
 ```
 
 ### Safety

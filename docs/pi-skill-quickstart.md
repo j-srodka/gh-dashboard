@@ -1,6 +1,6 @@
 # PI Skill Quickstart: Beads + Hindsight
 
-PI does not support MCP. Integration is via CLI commands and a skill README.
+PI now supports MCP via context-mode. The original CLI-based skill is still available as a fallback.
 
 ## Installation
 
@@ -37,9 +37,8 @@ Finally push code: git pull --rebase && git push
 
 ## Limitations
 
-- PI has no native MCP support.
-- PI has no built-in hooks like Claude Code.
-- Enforcement is entirely manual via prompts.
+- The CLI-based approach below is a fallback. With context-mode installed, PI gains MCP tools and hook-based routing.
+- Enforcement was entirely manual before context-mode. The context-mode extension now provides programmatic hooks.
 - Consider creating a PI alias or wrapper script that prepends the session-start commands.
 
 ## Validation
