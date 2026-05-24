@@ -12,7 +12,7 @@ export function useRepos() {
 
 export function usePullRequests(monitoredRepos?: string[]) {
   const repoFilter = monitoredRepos && monitoredRepos.length > 0
-    ? `+repo:${monitoredRepos.join(',')}`
+    ? monitoredRepos.map((r) => `+repo:${r}`).join('')
     : '';
   return useQuery({
     queryKey: ['pulls', 'all', monitoredRepos],
@@ -23,7 +23,7 @@ export function usePullRequests(monitoredRepos?: string[]) {
 
 export function useReviewRequests(monitoredRepos?: string[]) {
   const repoFilter = monitoredRepos && monitoredRepos.length > 0
-    ? `+repo:${monitoredRepos.join(',')}`
+    ? monitoredRepos.map((r) => `+repo:${r}`).join('')
     : '';
   return useQuery({
     queryKey: ['pulls', 'review-requested', monitoredRepos],
@@ -110,7 +110,7 @@ export function useRecentMerges(monitoredRepos?: string[]) {
   lastWeek.setDate(lastWeek.getDate() - 7);
   const dateStr = lastWeek.toISOString().split('T')[0];
   const repoFilter = monitoredRepos && monitoredRepos.length > 0
-    ? `+repo:${monitoredRepos.join(',')}`
+    ? monitoredRepos.map((r) => `+repo:${r}`).join('')
     : '';
 
   return useQuery({

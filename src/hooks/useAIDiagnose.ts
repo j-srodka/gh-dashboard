@@ -19,11 +19,24 @@ export function useAIDiagnose() {
   return useMutation({
     mutationFn: async (req: DiagnoseRequest): Promise<DiagnoseResult> => {
       // Read preferred agent from localStorage with validation
-      const raw = localStorage.getItem('aiAgent');
       const ALLOWED_AGENTS = [
         'opencode', 'claude-code', 'claude', 'cursor', 'codex', 'copilot', 'auto',
       ];
-      const preferred = raw && ALLOWED_AGENTS.includes(raw) ? raw : 'auto';
+      let preferred = 'auto';
+      try {
+        const raw = localStorage.getItem('aiAgent');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (ALLOWED_AGENTS.includes(parsed)) {
+            preferred = parsed;
+          }
+        }
+      } catch {
+        const raw = localStorage.getItem('aiAgent');
+        if (raw && ALLOWED_AGENTS.includes(raw)) {
+          preferred = raw;
+        }
+      }
 
       const body: DiagnoseRequest = {
         ...req,

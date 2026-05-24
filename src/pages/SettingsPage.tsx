@@ -39,7 +39,6 @@ export function SettingsPage() {
   const [notifyCiFailures, setNotifyCiFailures] = useLocalStorage<boolean>('notifyCiFailures', true);
   const [notifyReviewRequests, setNotifyReviewRequests] = useLocalStorage<boolean>('notifyReviewRequests', true);
   const [notifyMentions, setNotifyMentions] = useLocalStorage<boolean>('notifyMentions', true);
-  const [dailyDigest, setDailyDigest] = useLocalStorage<boolean>('dailyDigest', false);
   const [aiAgent, setAiAgent] = useLocalStorage<string>('aiAgent', 'auto');
   const { accounts, activeAccount, setActiveAccount } = useAccount();
   const [toast, setToast] = useState<string | null>(null);
@@ -222,19 +221,12 @@ export function SettingsPage() {
             </div>
             <Toggle checked={notifyCiFailures} onChange={() => setNotifyCiFailures(!notifyCiFailures)} ariaLabel="Toggle CI failure alerts" />
           </div>
-          <div className="flex items-center justify-between py-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
+          <div className="flex items-center justify-between py-3">
             <div>
               <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>Mention Notifications</div>
               <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Get notified when you are @mentioned on GitHub</div>
             </div>
             <Toggle checked={notifyMentions} onChange={() => setNotifyMentions(!notifyMentions)} ariaLabel="Toggle mention notifications" />
-          </div>
-          <div className="flex items-center justify-between py-3">
-            <div>
-              <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>Daily Digest</div>
-              <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Morning summary of your repositories and pull requests</div>
-            </div>
-            <Toggle checked={dailyDigest} onChange={() => setDailyDigest(!dailyDigest)} ariaLabel="Toggle daily digest" />
           </div>
         </div>
       </div>

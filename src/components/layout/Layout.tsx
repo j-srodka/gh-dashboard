@@ -28,7 +28,6 @@ import {
   PanelLeft,
   Filter,
   BarChart3,
-  Newspaper,
   Monitor,
   Kanban,
   Activity,
@@ -60,7 +59,7 @@ const NAV_SECTIONS: { title: string; items: { path: string; label: string; icon:
       { path: '/ci-health', label: 'CI Health', icon: Activity },
       { path: '/actions', label: 'Actions', icon: PlayCircle },
       { path: '/insights', label: 'Insights', icon: BarChart3 },
-      { path: '/digest', label: 'Digest', icon: Newspaper },
+
       { path: '/security', label: 'Security', icon: ShieldCheck },
     ],
   },
@@ -76,7 +75,7 @@ const PAGE_NAMES: Record<string, string> = {
   '/': 'Overview',
   '/repositories': 'Repositories',
   '/insights': 'Insights',
-  '/digest': 'Digest',
+
   '/pull-requests': 'Pull Requests',
   '/actions': 'Actions',
   '/review-queue': 'Review Queue',

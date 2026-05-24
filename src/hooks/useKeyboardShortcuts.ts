@@ -69,10 +69,6 @@ export function useKeyboardShortcuts({
             e.preventDefault();
             navigate('/review-queue');
             return;
-          case 'd':
-            e.preventDefault();
-            navigate('/digest');
-            return;
           case 'n':
             e.preventDefault();
             navigate('/notifications');

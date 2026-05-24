@@ -20,7 +20,6 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: 'g i', description: 'Go to Issues' },
       { keys: 'g a', description: 'Go to Actions' },
       { keys: 'g r', description: 'Go to Review Queue' },
-      { keys: 'g d', description: 'Go to Digest' },
       { keys: 'g n', description: 'Go to Notifications' },
       { keys: 'g s', description: 'Go to Settings' },
     ],
