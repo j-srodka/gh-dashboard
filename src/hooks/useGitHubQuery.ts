@@ -49,7 +49,7 @@ export function useIssues(monitoredRepos?: string[]) {
 export function useWorkflowRuns(owner: string, repo: string) {
   return useQuery({
     queryKey: ['workflows', owner, repo],
-    queryFn: () => githubGet<any>(`repos/${owner}/${repo}/actions/runs?per_page=20`),
+    queryFn: () => githubGet<any>(`repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/actions/runs?per_page=20`),
     enabled: !!owner && !!repo,
     select: (data: any) => data.workflow_runs || [],
   });
@@ -127,7 +127,7 @@ export function useFailingWorkflows(monitoredRepos: string[]) {
         const [owner, repo] = fullName.split('/');
         if (!owner || !repo) continue;
         try {
-          const data = await githubGet<any>(`repos/${owner}/${repo}/actions/runs?per_page=10`);
+          const data = await githubGet<any>(`repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/actions/runs?per_page=10`);
           const runs = (data.workflow_runs || []).filter((r: any) => r.conclusion === 'failure');
           results.push(...runs.map((r: any) => ({ ...r, repo: fullName })));
         } catch {}
@@ -193,7 +193,7 @@ export function useCreateIssue() {
       title: string;
       body?: string;
       labels?: string[];
-    }) => githubPost<any>(`repos/${owner}/${repo}/issues`, { title, body, labels }),
+    }) => githubPost<any>(`repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues`, { title, body, labels }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['issues'] });
     },
@@ -214,7 +214,7 @@ export function useDispatchWorkflow() {
       workflow_id: string | number;
       ref: string;
     }) =>
-      githubPost<any>(`repos/${owner}/${repo}/actions/workflows/${workflow_id}/dispatches`, { ref }),
+      githubPost<any>(`repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/actions/workflows/${workflow_id}/dispatches`, { ref }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bulk-workflows'] });
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
@@ -239,7 +239,7 @@ export function useCreatePullRequest() {
       head: string;
       base: string;
       body?: string;
-    }) => githubPost<any>(`repos/${owner}/${repo}/pulls`, { title, head, base, body }),
+    }) => githubPost<any>(`repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls`, { title, head, base, body }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pulls'] });
     },
@@ -256,7 +256,7 @@ export function useUser() {
 export function useRepoWorkflows(owner: string, repo: string) {
   return useQuery({
     queryKey: ['workflows-list', owner, repo],
-    queryFn: () => githubGet<any>(`repos/${owner}/${repo}/actions/workflows`),
+    queryFn: () => githubGet<any>(`repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/actions/workflows`),
     enabled: !!owner && !!repo,
     select: (data: any) => data.workflows || [],
   });
@@ -266,7 +266,7 @@ export function useRepoPullRequests(owner: string, repo: string) {
   return useQuery({
     queryKey: ['repo-pulls', owner, repo],
     queryFn: () =>
-      githubGet<any>(`repos/${owner}/${repo}/pulls?state=open&sort=updated&direction=desc&per_page=20`),
+      githubGet<any>(`repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls?state=open&sort=updated&direction=desc&per_page=20`),
     enabled: !!owner && !!repo,
   });
 }
@@ -275,7 +275,7 @@ export function useRepoIssues(owner: string, repo: string) {
   return useQuery({
     queryKey: ['repo-issues', owner, repo],
     queryFn: () =>
-      githubGet<any>(`repos/${owner}/${repo}/issues?state=open&sort=updated&direction=desc&per_page=20`),
+      githubGet<any>(`repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/issues?state=open&sort=updated&direction=desc&per_page=20`),
     enabled: !!owner && !!repo,
   });
 }
@@ -284,7 +284,7 @@ export function useRepoReleases(owner: string, repo: string) {
   return useQuery({
     queryKey: ['repo-releases', owner, repo],
     queryFn: () =>
-      githubGet<any>(`repos/${owner}/${repo}/releases?per_page=10`),
+      githubGet<any>(`repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/releases?per_page=10`),
     enabled: !!owner && !!repo,
   });
 }
@@ -370,8 +370,8 @@ export function useSecurityAlerts(monitoredRepos: string[]) {
         if (!owner || !repo) continue;
         try {
           const [dependabot, codeScanning] = await Promise.all([
-            githubGet<any[]>(`repos/${owner}/${repo}/dependabot/alerts?per_page=20`).catch(() => []),
-            githubGet<any[]>(`repos/${owner}/${repo}/code-scanning/alerts?per_page=20&state=open`).catch(() => []),
+            githubGet<any[]>(`repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/dependabot/alerts?per_page=20`).catch(() => []),
+            githubGet<any[]>(`repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/code-scanning/alerts?per_page=20&state=open`).catch(() => []),
           ]);
           results.push({ repo: fullName, dependabot: dependabot || [], codeScanning: codeScanning || [] });
         } catch {
@@ -458,7 +458,7 @@ export function useProjects(login: string) {
 export function useTrafficClones(owner: string, repo: string) {
   return useQuery({
     queryKey: ['traffic-clones', owner, repo],
-    queryFn: () => githubGet<any>(`repos/${owner}/${repo}/traffic/clones`),
+    queryFn: () => githubGet<any>(`repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/traffic/clones`),
     enabled: !!owner && !!repo,
     retry: false,
   });
@@ -467,7 +467,7 @@ export function useTrafficClones(owner: string, repo: string) {
 export function useTrafficViews(owner: string, repo: string) {
   return useQuery({
     queryKey: ['traffic-views', owner, repo],
-    queryFn: () => githubGet<any>(`repos/${owner}/${repo}/traffic/views`),
+    queryFn: () => githubGet<any>(`repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/traffic/views`),
     enabled: !!owner && !!repo,
     retry: false,
   });
@@ -481,7 +481,7 @@ export function useDependents(owner: string, repo: string) {
     queryFn: async () => {
       // Fetch forks (a form of dependents) and repos mentioning this project
       const [forks, searchResults] = await Promise.allSettled([
-        githubGet<any>(`repos/${owner}/${repo}/forks?sort=stargazers&per_page=10`),
+        githubGet<any>(`repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/forks?sort=stargazers&per_page=10`),
         githubGet<any>(`search/code?q=${encodeURIComponent(`"${owner}/${repo}"`)}+fork:true&per_page=10`),
       ]);
 
@@ -579,7 +579,7 @@ export function useCIHealth(monitoredRepos: string[]) {
         const [owner, repo] = fullName.split('/');
         if (!owner || !repo) continue;
         try {
-          const data = await githubGet<any>(`repos/${owner}/${repo}/actions/runs?per_page=30`);
+          const data = await githubGet<any>(`repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/actions/runs?per_page=30`);
           const runs = (data.workflow_runs || []) as any[];
           const completed = runs.filter((r: any) => r.conclusion);
           const successes = completed.filter((r: any) => r.conclusion === 'success');

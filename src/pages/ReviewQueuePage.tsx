@@ -247,9 +247,10 @@ export function ReviewQueuePage() {
     queryKey: ['diff-files', expandedOwner, expandedRepo, expandedPR],
     queryFn: () =>
       githubGet<FileDiff[]>(
-        `repos/${encodeURIComponent(expandedOwner!)}/${encodeURIComponent(expandedRepo!)}/pulls/${expandedPR}/files`,
+        `repos/${encodeURIComponent(expandedOwner!)}/${encodeURIComponent(expandedRepo!)}/pulls/${expandedPRData?.number}/files`,
       ),
-    enabled: !!expandedOwner && !!expandedRepo && expandedPR !== null,
+    enabled: !!expandedOwner && !!expandedRepo && expandedPR !== null && !!expandedPRData,
+    staleTime: 60_000, // Cache diff files for 1 minute
   });
 
   // ── Selected file diff content ───────────────────────────────────────────
@@ -655,8 +656,8 @@ export function ReviewQueuePage() {
                               <button
                                 onClick={() =>
                                   handleReviewAction(
-                                    expandedOwner!,
-                                    expandedRepo!,
+                                    expandedOwner || '',
+                                    expandedRepo || '',
                                     pr.number,
                                     'APPROVE',
                                   )
@@ -671,8 +672,8 @@ export function ReviewQueuePage() {
                               <button
                                 onClick={() =>
                                   handleReviewAction(
-                                    expandedOwner!,
-                                    expandedRepo!,
+                                    expandedOwner || '',
+                                    expandedRepo || '',
                                     pr.number,
                                     'REQUEST_CHANGES',
                                   )

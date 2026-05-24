@@ -69,10 +69,10 @@ function PinnedReposSection() {
 
 function PlanMyDayCard() {
   const navigate = useNavigate();
-  const emptyRepos = useMemo(() => [] as string[], []);
-  const { data: prData } = usePullRequests(emptyRepos);
-  const { data: issueData } = useIssues(emptyRepos);
-  const { data: reviewData } = useReviewRequests();
+  const { monitoredRepos } = useMonitoredRepos();
+  const { data: prData } = usePullRequests(monitoredRepos);
+  const { data: issueData } = useIssues(monitoredRepos);
+  const { data: reviewData } = useReviewRequests(monitoredRepos);
   const { data: eventData } = useEvents();
 
   const prs = prData || [];

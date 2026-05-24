@@ -36,11 +36,14 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
       // Use a monotonically-increasing version to let listeners distinguish
       // stale events from new ones (helps with StrictMode double-invoke).
       broadcastVersion[key] = (broadcastVersion[key] || 0) + 1;
-      window.dispatchEvent(
-        new CustomEvent(LOCAL_STORAGE_CHANGE, {
-          detail: { key, value: storedValue, version: broadcastVersion[key] },
-        }),
-      );
+      const version = broadcastVersion[key];
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent(LOCAL_STORAGE_CHANGE, {
+            detail: { key, value: storedValue, version },
+          }),
+        );
+      }, 0);
       committedRef.current = storedValue;
     } catch {
       // localStorage may be unavailable
