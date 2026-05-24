@@ -483,6 +483,7 @@ export function ActionsPage() {
           </div>
           <div className="flex items-center gap-3">
             <select
+              aria-label="Filter by repository"
               value={repoFilter}
               onChange={(e) => setRepoFilter(e.target.value)}
               className="min-w-[140px] rounded-lg border px-3 py-1.5 text-xs outline-none"

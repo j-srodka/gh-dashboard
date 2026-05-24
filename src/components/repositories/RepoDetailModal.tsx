@@ -129,6 +129,7 @@ export function RepoDetailModal({ repo, isOpen, onClose }: RepoDetailModalProps)
               className="p-2 rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
               style={{ color: isStarred ? 'var(--color-warning)' : 'var(--color-text-tertiary)' }}
               title={isStarred ? 'Unstar repository' : 'Star repository'}
+              aria-label={isStarred ? 'Unstar repository' : 'Star repository'}
             >
               {starPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -143,6 +144,7 @@ export function RepoDetailModal({ repo, isOpen, onClose }: RepoDetailModalProps)
               className="p-2 rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
               style={{ color: isWatched ? 'var(--color-info)' : 'var(--color-text-tertiary)' }}
               title={isWatched ? 'Unwatch repository' : 'Watch repository'}
+              aria-label={isWatched ? 'Unwatch repository' : 'Watch repository'}
             >
               {watchPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -175,6 +177,7 @@ export function RepoDetailModal({ repo, isOpen, onClose }: RepoDetailModalProps)
               onClick={onClose}
               className="p-2 rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
               style={{ color: 'var(--color-text-tertiary)' }}
+              aria-label="Close modal"
             >
               <X className="w-4 h-4" />
             </button>

@@ -31,6 +31,7 @@ import {
   CheckCheck,
   Loader2,
 } from 'lucide-react';
+import { useMemo } from 'react';
 
 function PinnedReposSection() {
   const navigate = useNavigate();
@@ -68,8 +69,9 @@ function PinnedReposSection() {
 
 function PlanMyDayCard() {
   const navigate = useNavigate();
-  const { data: prData } = usePullRequests([]);
-  const { data: issueData } = useIssues([]);
+  const emptyRepos = useMemo(() => [] as string[], []);
+  const { data: prData } = usePullRequests(emptyRepos);
+  const { data: issueData } = useIssues(emptyRepos);
   const { data: reviewData } = useReviewRequests();
   const { data: eventData } = useEvents();
 
@@ -327,9 +329,12 @@ export function OverviewPage() {
   const { data: mergeData } = useRecentMerges(monitoredRepos);
   const { data: failingData } = useFailingWorkflows(monitoredRepos);
 
-  const filteredRepos = monitoredRepos.length > 0
-    ? (repoData || []).filter((r: any) => monitoredRepos.includes(r.full_name))
-    : (repoData || []);
+  const filteredRepos = useMemo(
+    () => monitoredRepos.length > 0
+      ? (repoData || []).filter((r: any) => monitoredRepos.includes(r.full_name))
+      : (repoData || []),
+    [monitoredRepos, repoData],
+  );
 
   const repoCount = filteredRepos.length;
   const prCount = (prData || []).length;

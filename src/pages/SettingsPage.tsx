@@ -21,12 +21,13 @@ const AGENT_OPTIONS = [
   { value: 'copilot', label: 'GitHub Copilot', desc: 'gh extension install github/gh-copilot' },
 ];
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+function Toggle({ checked, onChange, ariaLabel }: { checked: boolean; onChange: () => void; ariaLabel?: string }) {
   return (
     <button
       onClick={onChange}
       className="relative w-11 h-6 rounded-full transition-colors flex-shrink-0"
       style={{ background: checked ? 'var(--color-brand)' : 'var(--color-border)' }}
+      aria-label={ariaLabel}
     >
       <span
         className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform"
@@ -102,7 +103,7 @@ export function SettingsPage() {
       </div>
 
       <div className="rounded-xl border p-6 mb-4" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-        <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>Appearance</h3>
+        <h2 className="text-base font-semibold mb-4 text-lg" style={{ color: 'var(--color-text-primary)' }}>Appearance</h2>
         <div className="grid grid-cols-3 gap-3 mb-4">
           <ThemeOption mode="light" current={themeMode} onClick={setThemeMode} icon={<Sun className="w-5 h-5" />} label="Light" />
           <ThemeOption mode="dark" current={themeMode} onClick={setThemeMode} icon={<Moon className="w-5 h-5" />} label="Dark" />
@@ -113,16 +114,16 @@ export function SettingsPage() {
             <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>Compact Sidebar</div>
             <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Collapse sidebar to icon-only mode</div>
           </div>
-          <Toggle checked={collapsed} onChange={() => setCollapsed(!collapsed)} />
+          <Toggle checked={collapsed} onChange={() => setCollapsed(!collapsed)} ariaLabel="Toggle compact sidebar" />
         </div>
       </div>
 
       {accounts.length > 1 && (
         <div className="rounded-xl border p-6 mb-4" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-          <h3 className="text-base font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+          <h2 className="text-base font-semibold mb-4 flex items-center gap-2 text-lg" style={{ color: 'var(--color-text-primary)' }}>
             <Users className="w-4 h-4" style={{ color: 'var(--color-brand)' }} />
             Account
-          </h3>
+          </h2>
           <p className="text-xs mb-3" style={{ color: 'var(--color-text-tertiary)' }}>Select which GitHub account to use for API requests</p>
           <div className="space-y-2">
             {accounts.map((account) => (
@@ -159,7 +160,7 @@ export function SettingsPage() {
       )}
 
       <div className="rounded-xl border p-6 mb-4" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-        <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>AI Agent</h3>
+        <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>AI Agent</h2>
         <p className="text-xs mb-3" style={{ color: 'var(--color-text-tertiary)' }}>Choose which agent CLI to use for AI troubleshooting</p>
         <div className="space-y-2">
           {AGENT_OPTIONS.map((opt) => (
@@ -187,36 +188,36 @@ export function SettingsPage() {
       </div>
 
       <div className="rounded-xl border p-6 mb-4" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-        <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>Notifications</h3>
+        <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>Notifications</h2>
         <div className="flex items-center justify-between py-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
           <div>
             <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>PR Review Reminders</div>
             <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Get notified when PRs need your review</div>
           </div>
-          <Toggle checked={prReminders} onChange={() => setPrReminders(!prReminders)} />
+          <Toggle checked={prReminders} onChange={() => setPrReminders(!prReminders)} ariaLabel="Toggle PR review reminders" />
         </div>
         <div className="flex items-center justify-between py-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
           <div>
             <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>CI Failures</div>
             <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Alert when workflows fail</div>
           </div>
-          <Toggle checked={ciFailures} onChange={() => setCiFailures(!ciFailures)} />
+          <Toggle checked={ciFailures} onChange={() => setCiFailures(!ciFailures)} ariaLabel="Toggle CI failures alert" />
         </div>
         <div className="flex items-center justify-between py-3">
           <div>
             <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>Daily Digest</div>
             <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Morning summary of your repos and PRs</div>
           </div>
-          <Toggle checked={dailyDigest} onChange={() => setDailyDigest(!dailyDigest)} />
+          <Toggle checked={dailyDigest} onChange={() => setDailyDigest(!dailyDigest)} ariaLabel="Toggle daily digest" />
         </div>
       </div>
 
       {/* Desktop Notifications */}
       <div className="rounded-xl border p-6 mb-4" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-        <h3 className="text-base font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+        <h2 className="text-base font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
           <Bell className="w-4 h-4" style={{ color: 'var(--color-brand)' }} />
           Desktop Notifications
-        </h3>
+        </h2>
 
         {permState === 'unsupported' ? (
           <div className="flex items-start gap-3 p-3 rounded-lg" style={{ background: 'var(--color-warning-light, #fef3c7)', border: '1px solid var(--color-warning, #f59e0b)' }}>
@@ -271,28 +272,28 @@ export function SettingsPage() {
                 <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>CI Failure Notifications</div>
                 <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Show desktop alert when a workflow fails</div>
               </div>
-              <Toggle checked={notifyCiFailures} onChange={() => setNotifyCiFailures(!notifyCiFailures)} />
+              <Toggle checked={notifyCiFailures} onChange={() => setNotifyCiFailures(!notifyCiFailures)} ariaLabel="Toggle CI failure desktop notifications" />
             </div>
             <div className="flex items-center justify-between py-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
               <div>
                 <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>Review Request Notifications</div>
                 <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Show desktop alert when a PR needs your review</div>
               </div>
-              <Toggle checked={notifyReviewRequests} onChange={() => setNotifyReviewRequests(!notifyReviewRequests)} />
+              <Toggle checked={notifyReviewRequests} onChange={() => setNotifyReviewRequests(!notifyReviewRequests)} ariaLabel="Toggle review request desktop notifications" />
             </div>
             <div className="flex items-center justify-between py-3">
               <div>
                 <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>Mention Notifications</div>
                 <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Show desktop alert when you're @mentioned</div>
               </div>
-              <Toggle checked={notifyMentions} onChange={() => setNotifyMentions(!notifyMentions)} />
+              <Toggle checked={notifyMentions} onChange={() => setNotifyMentions(!notifyMentions)} ariaLabel="Toggle mention desktop notifications" />
             </div>
           </>
         )}
       </div>
 
       <div className="rounded-xl border p-6 mb-4" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-        <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>Manage Repositories</h3>
+        <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>Manage Repositories</h2>
         <p className="text-xs mb-3" style={{ color: 'var(--color-text-tertiary)' }}>Select which repositories appear on your dashboard</p>
         <div className="space-y-2">
           {isLoading && <div className="text-sm py-2" style={{ color: 'var(--color-text-tertiary)' }}>Loading repositories...</div>}
@@ -303,14 +304,14 @@ export function SettingsPage() {
                 <span className="text-sm font-medium flex-shrink-0" style={{ color: 'var(--color-text-primary)' }}>{r.name}</span>
                 <span className="text-xs truncate" style={{ color: 'var(--color-text-tertiary)' }}>{r.desc}</span>
               </div>
-              <Toggle checked={isMonitored(r.fullName)} onChange={() => toggleRepo(r.fullName)} />
+              <Toggle checked={isMonitored(r.fullName)} onChange={() => toggleRepo(r.fullName)} ariaLabel={`Toggle monitoring for ${r.name}`} />
             </div>
           ))}
         </div>
       </div>
 
       <div className="rounded-xl border p-6" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-        <h3 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>Account</h3>
+        <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>Account</h2>
         <div className="flex items-center gap-4 py-3">
           {userAvatar ? (
             <img src={userAvatar} alt={userName} className="w-12 h-12 rounded-full object-cover" />

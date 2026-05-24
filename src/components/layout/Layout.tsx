@@ -205,6 +205,7 @@ export function Layout({ children }: LayoutProps) {
             className="p-1.5 rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
             style={{ color: 'var(--color-text-tertiary)' }}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             <PanelLeft className="w-4 h-4" />
           </button>
@@ -233,6 +234,7 @@ export function Layout({ children }: LayoutProps) {
                       style={({ isActive }) => ({
                         color: isActive ? 'var(--color-brand)' : 'var(--color-text-secondary)',
                       }) as any}
+                      aria-label={item.label}
                     >
                       <Icon className="w-4 h-4 flex-shrink-0" />
                       {!collapsed && <span>{item.label}</span>}
@@ -253,6 +255,7 @@ export function Layout({ children }: LayoutProps) {
             className="flex items-center gap-3 w-full px-2.5 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/50"
             style={{ color: 'var(--color-text-secondary)' }}
             title="Toggle theme: Light / Dark / System"
+            aria-label="Toggle theme: Light / Dark / System"
           >
             {themeMode === 'light' ? <Sun className="w-4 h-4 flex-shrink-0" /> : themeMode === 'dark' ? <Moon className="w-4 h-4 flex-shrink-0" /> : <Monitor className="w-4 h-4 flex-shrink-0" />}
             {!collapsed && (
@@ -264,6 +267,7 @@ export function Layout({ children }: LayoutProps) {
             className="flex items-center gap-3 w-full px-2.5 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/50"
             style={{ color: 'var(--color-text-secondary)' }}
             title={`Density: ${density === 'comfortable' ? 'Comfortable' : 'Compact'}`}
+            aria-label={`Density: ${density === 'comfortable' ? 'Comfortable' : 'Compact'}`}
           >
             <Minimize2 className={`w-4 h-4 flex-shrink-0 ${density === 'compact' ? 'rotate-180' : ''} transition-transform`} />
             {!collapsed && (
@@ -282,6 +286,7 @@ export function Layout({ children }: LayoutProps) {
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-md md:hidden transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
               style={{ color: 'var(--color-text-secondary)' }}
+              aria-label="Toggle navigation menu"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -337,6 +342,7 @@ export function Layout({ children }: LayoutProps) {
               onClick={() => setCommandOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-blue-300"
               style={{ background: 'var(--color-surface-secondary)', borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+              aria-label="Search (⌘K)"
             >
               <Search className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Search</span>
@@ -349,6 +355,7 @@ export function Layout({ children }: LayoutProps) {
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
                 className="relative p-2 rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/50"
                 style={{ color: 'var(--color-text-secondary)' }}
+                aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
               >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (

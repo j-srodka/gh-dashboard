@@ -246,11 +246,11 @@ export function buildRepoInsight(repo: any, options?: InsightOptions): RepoInsig
 export function labelColor(label: HealthLabel): string {
   switch (label) {
     case 'Strong':
-      return 'var(--color-success)';
+      return '#065f46';
     case 'Watch':
-      return 'var(--color-warning)';
+      return '#92400e';
     case 'Risky':
-      return 'var(--color-error)';
+      return '#991b1b';
   }
 }
 

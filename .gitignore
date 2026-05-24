@@ -83,3 +83,6 @@ validation/
 
 # Browser validation screenshots (Playwright)
 review/screenshots/
+
+# Audit tool output
+tools/audit-output/
