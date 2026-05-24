@@ -1,0 +1,85 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Server compiled output
+server/*.js
+server/*.js.map
+server/*.d.ts
+server/*.d.ts.map
+
+# Cache
+.vite/
+coverage/
+
+# Compiled TypeScript output in source tree
+*.js.map
+*.d.ts
+*.d.ts.map
+vite.config.js
+
+# Bundle analysis
+analysis.html
+
+# Agent workspaces
+.hermes/
+.pi/
+.cursor/
+
+# Beads issue tracker (local DB, hooks, config)
+.beads/
+
+# Agent scripts and validation
+scripts/
+review/
+
+# Original HTML mock (superseded)
+github-dashboard.html
+
+# Docker (local dev only)
+docker-compose.yml
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+
+# Local-only agent files
+.beads/interactions.jsonl
+.beads/issues.jsonl
+.sisyphus/
+
+# local agent files
+.claude/*
+.cursor/*review/
+validation/
+
+# Browser validation screenshots (Playwright)
+review/screenshots/
