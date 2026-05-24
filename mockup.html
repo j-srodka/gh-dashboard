@@ -1,0 +1,2674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Cosmic Portal — Engineering Command Center</title>
+  
+  <!-- Font Integration -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Styling -->
+  <style>
+    /* ── Design System Variables ── */
+    :root {
+      --bg-cosmic: #060b16;
+      --bg-gradient: radial-gradient(circle at top right, #0d152f 0%, #060b16 70%, #040811 100%);
+      
+      /* Surfaces (Translucent Glassmorphism) */
+      --surface-glass: rgba(15, 23, 42, 0.45);
+      --surface-glass-hover: rgba(23, 37, 68, 0.55);
+      --surface-glass-active: rgba(30, 48, 88, 0.7);
+      --surface-card: rgba(13, 20, 38, 0.75);
+      --border-glow: rgba(255, 255, 255, 0.06);
+      --border-glow-focus: rgba(99, 102, 241, 0.4);
+      
+      /* Typography */
+      --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'Fira Code', monospace;
+      
+      /* Colors */
+      --color-text-primary: #f8fafc;
+      --color-text-secondary: #94a3b8;
+      --color-text-tertiary: #64748b;
+      
+      --color-brand-start: #0ea5e9;
+      --color-brand-mid: #6366f1;
+      --color-brand-end: #8b5cf6;
+      
+      --color-success: #10b981;
+      --color-success-glow: rgba(16, 185, 129, 0.15);
+      --color-warning: #f59e0b;
+      --color-warning-glow: rgba(245, 158, 11, 0.15);
+      --color-error: #ef4444;
+      --color-error-glow: rgba(239, 68, 68, 0.15);
+      --color-info: #3b82f6;
+      --color-info-glow: rgba(59, 130, 246, 0.15);
+      
+      /* Spacing & Borders */
+      --radius-xl: 18px;
+      --radius-lg: 12px;
+      --radius-md: 8px;
+      --radius-sm: 4px;
+      
+      --sidebar-width: 260px;
+      --header-height: 70px;
+    }
+
+    /* ── Base Styles ── */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: var(--font-display);
+      background: var(--bg-cosmic);
+      background-image: var(--bg-gradient);
+      color: var(--color-text-primary);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    button, select, input {
+      font-family: inherit;
+      color: inherit;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    /* ── Scrollbars ── */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 99px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* ── Sidebar Layout ── */
+    .sidebar {
+      width: var(--sidebar-width);
+      height: 100vh;
+      background: rgba(8, 13, 27, 0.85);
+      border-right: 1px solid var(--border-glow);
+      display: flex;
+      flex-direction: column;
+      backdrop-filter: blur(20px);
+      z-index: 20;
+      flex-shrink: 0;
+      transition: width 0.3s ease;
+    }
+
+    .sidebar-header {
+      height: var(--header-height);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-glow);
+    }
+
+    .logo-container {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--color-brand-start), var(--color-brand-mid), var(--color-brand-end));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+    }
+
+    .logo-text {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #fff 30%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      overflow-y: auto;
+    }
+
+    .nav-group-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--color-text-tertiary);
+      padding-left: 8px;
+      margin-bottom: 8px;
+    }
+
+    .nav-links {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      color: var(--color-text-secondary);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .nav-item:hover {
+      color: var(--color-text-primary);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .nav-item.active {
+      color: var(--color-text-primary);
+      background: linear-gradient(90deg, rgba(99, 102, 241, 0.15) 0%, rgba(14, 165, 233, 0.04) 100%);
+      box-shadow: inset 3px 0 0 var(--color-brand-mid);
+    }
+
+    .nav-item svg {
+      width: 18px;
+      height: 18px;
+      stroke-width: 2;
+    }
+
+    .sidebar-footer {
+      padding: 16px;
+      border-top: 1px solid var(--border-glow);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px;
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-glow);
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--color-brand-mid);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+      color: white;
+      box-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
+    }
+
+    .user-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .user-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .user-role {
+      font-size: 10px;
+      color: var(--color-text-tertiary);
+    }
+
+    /* ── Main Container Layout ── */
+    .app-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      min-width: 0;
+      position: relative;
+    }
+
+    /* ── Header ── */
+    .header {
+      height: var(--header-height);
+      border-bottom: 1px solid var(--border-glow);
+      background: rgba(6, 11, 22, 0.5);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      z-index: 10;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .breadcrumb-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--color-text-primary);
+    }
+
+    .breadcrumb-subtitle {
+      font-size: 12px;
+      color: var(--color-text-tertiary);
+    }
+
+    .perspective-badge {
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      color: #a5b4fc;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .search-bar {
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-glow);
+      padding: 6px 12px;
+      border-radius: var(--radius-md);
+      width: 220px;
+      transition: all 0.2s;
+    }
+
+    .search-bar:focus-within {
+      width: 280px;
+      border-color: var(--border-glow-focus);
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.1);
+    }
+
+    .search-bar input {
+      background: transparent;
+      border: none;
+      outline: none;
+      width: 100%;
+      margin-left: 8px;
+      font-size: 12px;
+    }
+
+    .search-bar input::placeholder {
+      color: var(--color-text-tertiary);
+    }
+
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .icon-btn.badge::after {
+      content: '';
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--color-error);
+      border: 2px solid var(--bg-cosmic);
+      box-shadow: 0 0 6px var(--color-error);
+    }
+
+    /* ── Main Scrollable Area ── */
+    .viewport {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .main-content {
+      flex: 1;
+      padding: 32px;
+      overflow-y: auto;
+      min-width: 0;
+      position: relative;
+    }
+
+    /* ── Grid Layouts ── */
+    .grid {
+      display: grid;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .grid-cols-12 { grid-template-columns: repeat(12, 1fr); }
+    .col-span-12 { grid-column: span 12; }
+    .col-span-8 { grid-column: span 8; }
+    .col-span-6 { grid-column: span 6; }
+    .col-span-4 { grid-column: span 4; }
+    .col-span-3 { grid-column: span 3; }
+
+    /* Responsive adjusts */
+    @media (max-width: 1200px) {
+      .col-span-8, .col-span-4, .col-span-6, .col-span-3 {
+        grid-column: span 12;
+      }
+    }
+
+    /* ── Cards / Widgets ── */
+    .card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-glow);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(99, 102, 241, 0.15);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, transparent);
+      transition: background 0.3s;
+    }
+
+    .card.accent-brand::before {
+      background: linear-gradient(90deg, var(--color-brand-start), var(--color-brand-mid));
+    }
+    
+    .card.accent-sre::before {
+      background: linear-gradient(90deg, #f43f5e, #e11d48);
+    }
+
+    .card.accent-pm::before {
+      background: linear-gradient(90deg, #ec4899, #8b5cf6);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--color-text-primary);
+    }
+
+    .card-subtitle {
+      font-size: 11px;
+      color: var(--color-text-tertiary);
+      margin-top: 2px;
+    }
+
+    .card-title svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* ── AI Standup greeting widget ── */
+    .ai-greeting-card {
+      background: linear-gradient(135deg, rgba(8, 14, 30, 0.8) 0%, rgba(20, 24, 60, 0.5) 100%);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      box-shadow: 0 0 25px rgba(99, 102, 241, 0.1);
+    }
+
+    .ai-standup-body {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .ai-sparkle-orb {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--color-brand-start), var(--color-brand-mid), var(--color-brand-end));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.35);
+      animation: float 4s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+
+    .ai-digest-content {
+      flex: 1;
+    }
+
+    .ai-digest-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ai-digest-title .badge {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 100px;
+      background: linear-gradient(135deg, var(--color-brand-mid), var(--color-brand-end));
+      color: white;
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    .ai-digest-text {
+      color: var(--color-text-secondary);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .ai-digest-bullets {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    @media (max-width: 768px) {
+      .ai-digest-bullets {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .ai-bullet {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--color-text-secondary);
+      background: rgba(255, 255, 255, 0.015);
+      border: 1px solid var(--border-glow);
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      transition: background 0.2s;
+    }
+
+    .ai-bullet:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .ai-bullet svg {
+      width: 14px;
+      height: 14px;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    /* ── Scored Inbox (Dev View) ── */
+    .inbox-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .inbox-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 16px;
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid var(--border-glow);
+      transition: all 0.2s;
+    }
+
+    .inbox-row:hover {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.1);
+      transform: translateX(4px);
+    }
+
+    .inbox-check {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 1.5px solid var(--color-text-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: transparent;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .inbox-check:hover {
+      border-color: var(--color-brand-start);
+      background: rgba(14, 165, 233, 0.1);
+      color: rgba(14, 165, 233, 0.5);
+    }
+
+    .inbox-check svg {
+      width: 10px;
+      height: 10px;
+      stroke-width: 3px;
+    }
+
+    .inbox-row.archiving {
+      opacity: 0;
+      transform: translateX(-20px);
+      height: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      margin: 0;
+      border: none;
+      overflow: hidden;
+      transition: all 0.4s ease;
+    }
+
+    .attention-score {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .attention-score .score-label {
+      font-size: 7px;
+      font-weight: 700;
+      text-transform: uppercase;
+      opacity: 0.8;
+      margin-top: -2px;
+    }
+
+    .score-urgent { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: var(--color-error); }
+    .score-attention { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); color: var(--color-warning); }
+    .score-info { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); color: var(--color-info); }
+    .score-low { background: rgba(148, 163, 184, 0.1); border: 1px solid rgba(148, 163, 184, 0.2); color: var(--color-text-secondary); }
+
+    .inbox-meta {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .inbox-title-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .inbox-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .reason-badge {
+      font-size: 9px;
+      padding: 1px 6px;
+      border-radius: 100px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+
+    .reason-request { background: rgba(245, 158, 11, 0.15); color: var(--color-warning); }
+    .reason-mention { background: rgba(139, 92, 246, 0.15); color: #c084fc; }
+    .reason-fail { background: rgba(239, 68, 68, 0.15); color: var(--color-error); }
+    .reason-assign { background: rgba(14, 165, 233, 0.15); color: var(--color-brand-start); }
+
+    .inbox-details {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--color-text-tertiary);
+    }
+
+    .inbox-details span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .inbox-details svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .inbox-repo {
+      color: var(--color-text-secondary);
+      font-weight: 500;
+    }
+
+    /* ── Pull Request Row Card ── */
+    .pr-queue {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .pr-row {
+      background: rgba(255, 255, 255, 0.015);
+      border: 1px solid var(--border-glow);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      transition: all 0.2s;
+    }
+
+    .pr-row:hover {
+      border-color: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .pr-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .pr-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .pr-title-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pr-title {
+      font-weight: 600;
+      font-size: 13.5px;
+      color: var(--color-text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pr-num {
+      color: var(--color-text-tertiary);
+      font-weight: 400;
+    }
+
+    .pr-metrics {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--color-text-tertiary);
+    }
+
+    .pr-badges {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge-diff-add { color: var(--color-success); font-weight: 600; }
+    .badge-diff-del { color: var(--color-error); font-weight: 600; }
+    
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 100px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .status-badge svg {
+      width: 10px;
+      height: 10px;
+      stroke-width: 3px;
+    }
+
+    .badge-approved { background: rgba(16, 185, 129, 0.1); color: var(--color-success); border: 1px solid rgba(16, 185, 129, 0.2); }
+    .badge-blocked { background: rgba(239, 68, 68, 0.1); color: var(--color-error); border: 1px solid rgba(239, 68, 68, 0.2); }
+    .badge-pending { background: rgba(245, 158, 11, 0.1); color: var(--color-warning); border: 1px solid rgba(245, 158, 11, 0.2); }
+
+    .pr-collapsible-btn {
+      cursor: pointer;
+      color: var(--color-text-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      transition: background 0.2s, transform 0.2s;
+    }
+
+    .pr-collapsible-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--color-text-primary);
+    }
+
+    .pr-row.expanded .pr-collapsible-btn {
+      transform: rotate(180deg);
+    }
+
+    .pr-detail-drawer {
+      display: none;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px dashed var(--border-glow);
+    }
+
+    .pr-row.expanded .pr-detail-drawer {
+      display: block;
+      animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .pr-reviewers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .reviewer-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid var(--border-glow);
+      border-radius: var(--radius-md);
+      font-size: 11px;
+    }
+
+    .reviewer-card .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .reviewer-card .dot-success { background: var(--color-success); box-shadow: 0 0 6px var(--color-success); }
+    .reviewer-card .dot-warning { background: var(--color-warning); box-shadow: 0 0 6px var(--color-warning); }
+    .reviewer-card .dot-error { background: var(--color-error); box-shadow: 0 0 6px var(--color-error); }
+
+    .pr-actions-bar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+    }
+
+    .btn svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.02);
+      border-color: var(--border-glow);
+      color: var(--color-text-secondary);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.15);
+      color: var(--color-text-primary);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--color-brand-start), var(--color-brand-mid));
+      color: white;
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+    }
+
+    .btn-success {
+      background: var(--color-success);
+      color: white;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+    }
+
+    .btn-success:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    /* ── CI Pipeline Health (SRE View) ── */
+    .pipeline-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .pipeline-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr 1fr 0.5fr;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 20px;
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid var(--border-glow);
+      transition: all 0.2s;
+    }
+
+    @media (max-width: 768px) {
+      .pipeline-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .pipeline-row > *:nth-child(n+3):not(:last-child) {
+        display: none;
+      }
+    }
+
+    .pipeline-row:hover {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .pipeline-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 600;
+    }
+
+    .status-dot-pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      position: relative;
+    }
+
+    .status-dot-pulse.success { background: var(--color-success); }
+    .status-dot-pulse.error { background: var(--color-error); }
+    .status-dot-pulse.warning { background: var(--color-warning); }
+
+    .status-dot-pulse.success::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: var(--color-success);
+      animation: pulse 2s infinite;
+      top: 0;
+      left: 0;
+    }
+
+    .status-dot-pulse.error::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: var(--color-error);
+      animation: pulse 2s infinite;
+      top: 0;
+      left: 0;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.8; }
+      100% { transform: scale(3.5); opacity: 0; }
+    }
+
+    .pipeline-bar-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pipeline-bar {
+      height: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 100px;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .pipeline-fill {
+      height: 100%;
+      border-radius: 100px;
+    }
+
+    .pipeline-fill.success { background: var(--color-success); }
+    .pipeline-fill.warning { background: var(--color-warning); }
+    .pipeline-fill.error { background: var(--color-error); }
+
+    .pipeline-pct {
+      font-size: 11px;
+      font-weight: 700;
+      width: 32px;
+      text-align: right;
+    }
+
+    .pipeline-runs, .pipeline-duration, .pipeline-last {
+      font-size: 12px;
+      color: var(--color-text-secondary);
+    }
+
+    /* ── AI Logs Troubleshooter ── */
+    .ai-troubleshooter-box {
+      background: linear-gradient(135deg, rgba(13, 10, 31, 0.8) 0%, rgba(20, 16, 44, 0.6) 100%);
+      border: 1px solid rgba(168, 85, 247, 0.25);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      box-shadow: 0 0 25px rgba(168, 85, 247, 0.08);
+      position: relative;
+    }
+
+    .ai-troubleshooter-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 14px;
+      margin-bottom: 20px;
+    }
+
+    .ai-troubleshooter-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #e9d5ff;
+    }
+
+    .ai-troubleshooter-title svg {
+      width: 20px;
+      height: 20px;
+      color: #a855f7;
+    }
+
+    .log-terminal {
+      background: #04060c;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #d1d5db;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      max-height: 180px;
+      overflow-y: auto;
+      box-shadow: inset 0 2px 10px rgba(0,0,0,0.8);
+    }
+
+    .log-line.error {
+      color: var(--color-error);
+      background: rgba(239, 68, 68, 0.05);
+      border-left: 2px solid var(--color-error);
+      padding-left: 6px;
+    }
+
+    .ai-diagnostic-output {
+      display: none;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .ai-diagnostic-output.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .diagnostic-bubble {
+      background: rgba(168, 85, 247, 0.06);
+      border: 1px dashed rgba(168, 85, 247, 0.25);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .diagnostic-title {
+      font-weight: 700;
+      color: #c084fc;
+      margin-bottom: 6px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .diagnostic-text {
+      font-size: 12.5px;
+      color: var(--color-text-secondary);
+      line-height: 1.5;
+    }
+
+    .diff-container {
+      background: #02040a;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      margin-top: 14px;
+    }
+
+    .diff-header {
+      background: rgba(255, 255, 255, 0.02);
+      padding: 8px 12px;
+      font-size: 10px;
+      color: var(--color-text-tertiary);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .diff-body {
+      padding: 8px 0;
+      overflow-x: auto;
+    }
+
+    .diff-line {
+      padding: 2px 16px;
+      white-space: pre;
+    }
+
+    .diff-line.del { background: rgba(239, 68, 68, 0.1); color: #f87171; border-left: 3px solid var(--color-error); }
+    .diff-line.add { background: rgba(16, 185, 129, 0.1); color: #34d399; border-left: 3px solid var(--color-success); }
+    .diff-line.ctx { opacity: 0.6; padding-left: 19px; }
+
+    /* ── DORA Metrics (PM View) ── */
+    .dora-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .dora-row {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (max-width: 550px) {
+      .dora-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .dora-metric-card {
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid var(--border-glow);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      text-align: center;
+      transition: all 0.25s;
+    }
+
+    .dora-metric-card:hover {
+      border-color: rgba(99, 102, 241, 0.15);
+      background: rgba(255, 255, 255, 0.02);
+      transform: translateY(-2px);
+    }
+
+    .dora-metric-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--color-text-tertiary);
+    }
+
+    .dora-metric-value {
+      font-size: 26px;
+      font-weight: 800;
+      margin: 10px 0 2px;
+      background: linear-gradient(135deg, var(--color-brand-start), var(--color-brand-mid));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    .dora-metric-card:nth-child(2) .dora-metric-value {
+      background: linear-gradient(135deg, var(--color-brand-mid), var(--color-brand-end));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .dora-metric-card:nth-child(3) .dora-metric-value {
+      background: linear-gradient(135deg, #10b981, #059669);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .dora-metric-card:nth-child(4) .dora-metric-value {
+      background: linear-gradient(135deg, #f43f5e, #be123c);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .dora-metric-rating {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--color-success);
+      background: rgba(16, 185, 129, 0.1);
+      padding: 2px 8px;
+      border-radius: 100px;
+      display: inline-block;
+    }
+
+    .dora-metric-rating.warning {
+      color: var(--color-warning);
+      background: rgba(245, 158, 11, 0.1);
+    }
+
+    /* ── Kanban Board (PM View) ── */
+    .kanban-board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .kanban-board {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .kanban-column {
+      background: rgba(255, 255, 255, 0.005);
+      border: 1px solid var(--border-glow);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .kanban-column-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .kanban-column-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--color-text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .kanban-column-title .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .column-todo .dot { background: var(--color-info); }
+    .column-progress .dot { background: var(--color-warning); }
+    .column-done .dot { background: var(--color-success); }
+
+    .kanban-column-count {
+      font-size: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 2px 6px;
+      border-radius: 100px;
+      color: var(--color-text-tertiary);
+      font-weight: 600;
+    }
+
+    .kanban-card {
+      background: var(--surface-glass);
+      border: 1px solid var(--border-glow);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      cursor: grab;
+      transition: all 0.2s;
+    }
+
+    .kanban-card:hover {
+      border-color: rgba(255, 255, 255, 0.1);
+      background: var(--surface-glass-hover);
+      transform: translateY(-1px);
+    }
+
+    .kanban-card-title {
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--color-text-primary);
+    }
+
+    .kanban-card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      font-size: 10px;
+      color: var(--color-text-tertiary);
+    }
+
+    .kanban-card-tags {
+      display: flex;
+      gap: 4px;
+    }
+
+    .kanban-tag {
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .tag-bug { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+    .tag-feature { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+    .tag-security { background: rgba(139, 92, 246, 0.15); color: #c084fc; }
+
+    /* ── Persistent AI Copilot Panel (Right) ── */
+    .copilot-panel {
+      width: 320px;
+      height: 100%;
+      background: rgba(8, 13, 27, 0.85);
+      border-left: 1px solid var(--border-glow);
+      display: flex;
+      flex-direction: column;
+      backdrop-filter: blur(20px);
+      z-index: 20;
+      flex-shrink: 0;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .copilot-panel.collapsed {
+      transform: translateX(100%);
+      width: 0;
+      border-left: none;
+    }
+
+    .copilot-header {
+      height: var(--header-height);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border-glow);
+    }
+
+    .copilot-title {
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #a855f7, #6366f1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .copilot-title svg {
+      width: 16px;
+      height: 16px;
+      color: #a855f7;
+    }
+
+    .copilot-chat-history {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .chat-bubble {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-width: 85%;
+      padding: 10px 14px;
+      border-radius: var(--radius-lg);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .chat-bubble.assistant {
+      align-self: flex-start;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-glow);
+      border-top-left-radius: 0;
+    }
+
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, var(--color-brand-start), var(--color-brand-mid));
+      color: white;
+      border-top-right-radius: 0;
+    }
+
+    .chat-sender {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--color-text-tertiary);
+    }
+    
+    .chat-bubble.user .chat-sender {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    /* Typing indicators */
+    .typing-indicator {
+      display: none;
+      align-self: flex-start;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-glow);
+      border-radius: var(--radius-lg);
+      border-top-left-radius: 0;
+      padding: 12px 16px;
+      gap: 4px;
+    }
+
+    .typing-indicator.active {
+      display: flex;
+    }
+
+    .typing-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--color-text-tertiary);
+      animation: typing 1.4s infinite ease-in-out;
+    }
+
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typing {
+      0%, 100% { transform: translateY(0); opacity: 0.4; }
+      50% { transform: translateY(-4px); opacity: 1; }
+    }
+
+    .copilot-input-area {
+      padding: 16px;
+      border-top: 1px solid var(--border-glow);
+      display: flex;
+      gap: 8px;
+    }
+
+    .copilot-input-area input {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-glow);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      font-size: 12px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .copilot-input-area input:focus {
+      border-color: var(--border-glow-focus);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    /* ── Hide/Show Views ── */
+    .view-pane {
+      display: none;
+    }
+
+    .view-pane.active {
+      display: block;
+      animation: fadeInView 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes fadeInView {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Keyboard Shortcut Overlay ── */
+    .shortcuts-help-btn {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--color-text-secondary);
+      z-index: 100;
+      transition: all 0.2s;
+    }
+
+    .shortcuts-help-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--color-text-primary);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .kbd-tip {
+      font-size: 9px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-glow);
+      border-radius: 3px;
+      padding: 1px 4px;
+      font-family: var(--font-mono);
+      color: var(--color-text-secondary);
+      margin-left: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ════════════════════════════════════════ -->
+  <!-- SIDEBAR -->
+  <!-- ════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-container">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
+          <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path>
+          <path d="M9 18c-4.51 2-5-2-7-2"></path>
+        </svg>
+      </div>
+      <span class="logo-text">Cosmic Portal</span>
+    </div>
+    
+    <nav class="sidebar-nav">
+      <div>
+        <div class="nav-group-title">Perspectives</div>
+        <div class="nav-links">
+          <div class="nav-item active" data-view="unified" id="nav-unified">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <rect x="3" y="3" width="7" height="9" rx="1"></rect>
+              <rect x="14" y="3" width="7" height="5" rx="1"></rect>
+              <rect x="14" y="12" width="7" height="9" rx="1"></rect>
+              <rect x="3" y="16" width="7" height="5" rx="1"></rect>
+            </svg>
+            <span>Unified Hub</span>
+            <span class="kbd-tip">1</span>
+          </div>
+          <div class="nav-item" data-view="dev" id="nav-dev">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"></path>
+            </svg>
+            <span>Dev Workspace</span>
+            <span class="kbd-tip">2</span>
+          </div>
+          <div class="nav-item" data-view="sre" id="nav-sre">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.3 16.2L12 18.7l-3.3-2.5m6.6-8.4L12 5.3 8.7 7.8M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 12m-3 0a3 3 0 106 0 3 3 0 10-6 0"></path>
+            </svg>
+            <span>SRE Operations</span>
+            <span class="kbd-tip">3</span>
+          </div>
+          <div class="nav-item" data-view="pm" id="nav-pm">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"></path>
+            </svg>
+            <span>PM Delivery</span>
+            <span class="kbd-tip">4</span>
+          </div>
+        </div>
+      </div>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <div class="user-pill">
+        <div class="user-avatar">JS</div>
+        <div class="user-info">
+          <div class="user-name">J. Srodka</div>
+          <div class="user-role">Platform Lead</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ════════════════════════════════════════ -->
+  <!-- MAIN CONTAINER -->
+  <!-- ════════════════════════════════════════ -->
+  <div class="app-container">
+    
+    <!-- HEADER -->
+    <header class="header">
+      <div class="header-left">
+        <div>
+          <div class="breadcrumb-subtitle">Global Repositories</div>
+          <div class="breadcrumb-title" id="perspective-title">Unified Hub</div>
+        </div>
+        <span class="perspective-badge" id="perspective-badge">Unified</span>
+      </div>
+      
+      <div class="header-right">
+        <div class="search-bar">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--color-text-tertiary)" width="16" height="16">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+          <input type="text" placeholder="Search commands, pull requests...">
+        </div>
+        
+        <div class="icon-btn badge" id="notif-btn" title="Inbox Notifications">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a3 3 0 11-5.714 0M3.124 7.5A8.969 8.969 0 015.292 3m13.416 0a8.969 8.969 0 012.168 4.5"></path>
+          </svg>
+        </div>
+        
+        <div class="icon-btn" id="copilot-toggle-btn" title="Toggle AI Copilot Panel (Key: c)">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="18" height="18" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 21m0 0l-.813-5.096M9 21h3.375c.621 0 1.125-.504 1.125-1.125V18M9 21H5.625M9 6h.008v.008H9V6zm5.625.75H15M9 9h.008v.008H9V9zm5.625 0H15M9 12h.008v.008H9V12zm5.625 0H15M9 15h.008v.008H9V15zm5.625 0H15M2.25 12a9.75 9.75 0 0115.008-8.25M2.25 12a9.75 9.75 0 0015.008 8.25M17.25 12h4.5m0 0l-2.25-2.25M21.75 12l-2.25 2.25"></path>
+          </svg>
+        </div>
+      </div>
+    </header>
+
+    <!-- VIEWPORT -->
+    <div class="viewport">
+      
+      <!-- MAIN CONTENT VIEW -->
+      <main class="main-content">
+        
+        <!-- ════════════════════════════════════════ -->
+        <!-- VIEW: UNIFIED HUB -->
+        <!-- ════════════════════════════════════════ -->
+        <div id="view-unified" class="view-pane active">
+          
+          <!-- AI Standup Greeting -->
+          <div class="card ai-greeting-card col-span-12 mb-6" style="padding: 20px;">
+            <div class="ai-standup-body">
+              <div class="ai-sparkle-orb">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="white" width="24" height="24" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 21m0 0l-.813-5.096M9 21h3.375c.621 0 1.125-.504 1.125-1.125V18M9 21H5.625M9 6h.008v.008H9V6zm5.625.75H15M9 9h.008v.008H9V9zm5.625 0H15M9 12h.008v.008H9V12zm5.625 0H15M9 15h.008v.008H9V15zm5.625 0H15M2.25 12a9.75 9.75 0 0115.008-8.25M2.25 12a9.75 9.75 0 0015.008 8.25M17.25 12h4.5m0 0l-2.25-2.25M21.75 12l-2.25 2.25"></path>
+                </svg>
+              </div>
+              <div class="ai-digest-content">
+                <div class="ai-digest-title">
+                  Good Morning, J. Srodka
+                  <span class="badge">AI Standup Digest</span>
+                </div>
+                <div class="ai-digest-text">
+                  Yesterday, you successfully merged <strong>4 pull requests</strong>. Today, the release pipeline is healthy, but a critical build error requires SRE attention on <code>gh-dashboard</code>. Here is your focus agenda:
+                </div>
+                
+                <div class="ai-digest-bullets">
+                  <div class="ai-bullet">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--color-error)" stroke-width="2.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <span><strong>CI Broken:</strong> <code>gh-dashboard</code> compilation failed due to a missing type signature. Diagnostics generated.</span>
+                  </div>
+                  <div class="ai-bullet">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="var(--color-warning)" stroke-width="2.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span><strong>Review Pending:</strong> PR #89 needs your final approval to complete the caching integration.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-12">
+            <!-- Scored Inbox Preview -->
+            <div class="card col-span-8 accent-brand">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0a2 2 0 01-2 2H6a2 2 0 01-2-2m16 0V9a2 2 0 00-2-2H6a2 2 0 00-2 2v3m16 0h-3.586a1 1 0 00-.707.293l-1.414 1.414a1 1 0 01-.707.293H8.343a1 1 0 01-.707-.293l-1.414-1.414A1 1 0 005.514 12H2"></path>
+                    </svg>
+                    Scored Inbox
+                  </div>
+                  <div class="card-subtitle">Prioritized triage items scored by attention heuristics</div>
+                </div>
+                <button class="btn btn-secondary" onclick="switchView('dev')">View Workspace</button>
+              </div>
+              
+              <div class="inbox-list" id="unified-inbox-list">
+                <!-- Row 1 -->
+                <div class="inbox-row" id="row-1">
+                  <div class="inbox-check" onclick="archiveRow('row-1')" title="Mark as Read">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </div>
+                  <div class="attention-score score-urgent">
+                    84
+                    <span class="score-label">Score</span>
+                  </div>
+                  <div class="inbox-meta">
+                    <div class="inbox-title-container">
+                      <span class="inbox-title">PR #142: Refactor auth middleware to support multi-account resolutions</span>
+                      <span class="reason-badge reason-fail">failed run</span>
+                    </div>
+                    <div class="inbox-details">
+                      <span class="inbox-repo">cortexkit/api</span>
+                      <span>•</span>
+                      <span>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        1h ago
+                      </span>
+                      <span>•</span>
+                      <span>💬 14 comments</span>
+                    </div>
+                  </div>
+                </div>
+                <!-- Row 2 -->
+                <div class="inbox-row" id="row-2">
+                  <div class="inbox-check" onclick="archiveRow('row-2')" title="Mark as Read">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </div>
+                  <div class="attention-score score-attention">
+                    62
+                    <span class="score-label">Score</span>
+                  </div>
+                  <div class="inbox-meta">
+                    <div class="inbox-title-container">
+                      <span class="inbox-title">PR #89: Add rate limiting to proxy endpoints & telemetry collectors</span>
+                      <span class="reason-badge reason-request">review requested</span>
+                    </div>
+                    <div class="inbox-details">
+                      <span class="inbox-repo">gh-dashboard</span>
+                      <span>•</span>
+                      <span>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        3h ago
+                      </span>
+                      <span>•</span>
+                      <span>👁️ Awaiting your review</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Quick CI Status -->
+            <div class="card col-span-4 accent-sre">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Pipeline Status
+                  </div>
+                  <div class="card-subtitle">Active repository pipeline health aggregation</div>
+                </div>
+                <button class="btn btn-secondary" onclick="switchView('sre')">All Runs</button>
+              </div>
+              
+              <div class="pipeline-grid">
+                <div class="pipeline-row" style="grid-template-columns: 1.5fr 1fr; padding: 10px 14px;">
+                  <div class="pipeline-info">
+                    <div class="status-dot-pulse success"></div>
+                    <span style="font-size:12.5px">cortexkit/api</span>
+                  </div>
+                  <div class="pipeline-bar-container">
+                    <div class="pipeline-bar">
+                      <div class="pipeline-fill success" style="width: 94%;"></div>
+                    </div>
+                    <span class="pipeline-pct" style="font-size:10px">94%</span>
+                  </div>
+                </div>
+                
+                <div class="pipeline-row" style="grid-template-columns: 1.5fr 1fr; padding: 10px 14px;" id="pipeline-dashboard-row">
+                  <div class="pipeline-info">
+                    <div class="status-dot-pulse error" id="dashboard-pipeline-dot"></div>
+                    <span style="font-size:12.5px">gh-dashboard</span>
+                  </div>
+                  <div class="pipeline-bar-container">
+                    <div class="pipeline-bar">
+                      <div class="pipeline-fill error" style="width: 52%;" id="dashboard-pipeline-bar"></div>
+                    </div>
+                    <span class="pipeline-pct text-error" style="font-size:10px" id="dashboard-pipeline-text">52%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- PM Delivery Stats Summary -->
+            <div class="card col-span-12 accent-pm">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    DORA Insights & Metrics
+                  </div>
+                  <div class="card-subtitle">Aggregated metrics representing project delivery frequency and quality</div>
+                </div>
+                <button class="btn btn-secondary" onclick="switchView('pm')">Open Delivery</button>
+              </div>
+              
+              <div class="dora-row">
+                <div class="dora-metric-card">
+                  <div class="dora-metric-title">Deployment Frequency</div>
+                  <div class="dora-metric-value">4.2/day</div>
+                  <div class="dora-metric-rating">Elite</div>
+                </div>
+                <div class="dora-metric-card">
+                  <div class="dora-metric-title">Lead Time for Changes</div>
+                  <div class="dora-metric-value">1.4 days</div>
+                  <div class="dora-metric-rating">Elite</div>
+                </div>
+                <div class="dora-metric-card">
+                  <div class="dora-metric-title">Mean Time to Recover</div>
+                  <div class="dora-metric-value">28m</div>
+                  <div class="dora-metric-rating">Elite</div>
+                </div>
+                <div class="dora-metric-card">
+                  <div class="dora-metric-title">Change Failure Rate</div>
+                  <div class="dora-metric-value" id="metrics-cfr">4.8%</div>
+                  <div class="dora-metric-rating" id="metrics-cfr-rating">Elite</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ════════════════════════════════════════ -->
+        <!-- VIEW: DEVELOPER WORKSPACE -->
+        <!-- ════════════════════════════════════════ -->
+        <div id="view-dev" class="view-pane">
+          <div class="grid grid-cols-12">
+            
+            <!-- Full Scored Inbox -->
+            <div class="card col-span-12 accent-brand">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Scored Triage Inbox</div>
+                  <div class="card-subtitle">Classification based on assignment, mentions, state, and size.</div>
+                </div>
+                <div class="pr-badges">
+                  <span class="reason-badge reason-assign" id="inbox-remaining-pill">2 items pending</span>
+                </div>
+              </div>
+              
+              <div class="inbox-list" id="dev-inbox-list">
+                <!-- Item 1 -->
+                <div class="inbox-row" id="dev-row-1">
+                  <div class="inbox-check" onclick="archiveRow('dev-row-1', 'unified-row-1')" title="Mark as Read">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </div>
+                  <div class="attention-score score-urgent">
+                    84
+                    <span class="score-label">Score</span>
+                  </div>
+                  <div class="inbox-meta">
+                    <div class="inbox-title-container">
+                      <span class="inbox-title">PR #142: Refactor auth middleware to support multi-account resolutions</span>
+                      <span class="reason-badge reason-fail">failed run</span>
+                    </div>
+                    <div class="inbox-details">
+                      <span class="inbox-repo">cortexkit/api</span>
+                      <span>•</span>
+                      <span>1h ago</span>
+                      <span>•</span>
+                      <span>💬 14 comments</span>
+                    </div>
+                  </div>
+                </div>
+                <!-- Item 2 -->
+                <div class="inbox-row" id="dev-row-2">
+                  <div class="inbox-check" onclick="archiveRow('dev-row-2')" title="Mark as Read">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </div>
+                  <div class="attention-score score-attention">
+                    62
+                    <span class="score-label">Score</span>
+                  </div>
+                  <div class="inbox-meta">
+                    <div class="inbox-title-container">
+                      <span class="inbox-title">PR #89: Add rate limiting to proxy endpoints & telemetry collectors</span>
+                      <span class="reason-badge reason-request">review requested</span>
+                    </div>
+                    <div class="inbox-details">
+                      <span class="inbox-repo">gh-dashboard</span>
+                      <span>•</span>
+                      <span>3h ago</span>
+                      <span>•</span>
+                      <span>👁️ Awaiting your review</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- PR Review Queue with Diff Preview (Power User Feature!) -->
+            <div class="card col-span-12">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                    Code Review Queue
+                  </div>
+                  <div class="card-subtitle">PRs awaiting your review with inline quick previews</div>
+                </div>
+              </div>
+              
+              <div class="pr-queue">
+                <!-- PR 1 -->
+                <div class="pr-row" id="pr-card-1">
+                  <div class="pr-header">
+                    <div class="pr-info">
+                      <div class="pr-title-line">
+                        <span class="pr-title">PR #89: Add rate limiting to proxy endpoints</span>
+                        <span class="pr-num">#89</span>
+                      </div>
+                      <div class="pr-metrics">
+                        <span class="inbox-repo">gh-dashboard</span>
+                        <span>•</span>
+                        <span class="badge-diff-add">+145</span>
+                        <span class="badge-diff-del">−32 lines</span>
+                        <span>•</span>
+                        <span class="status-badge badge-pending">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                          </svg>
+                          Awaiting Review
+                        </span>
+                      </div>
+                    </div>
+                    <div class="pr-collapsible-btn" onclick="togglePR('pr-card-1')">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  <!-- PR expanded details -->
+                  <div class="pr-detail-drawer">
+                    <h5 style="font-size:11px; text-transform:uppercase; color:var(--color-text-tertiary); margin-bottom:8px; letter-spacing:0.5px">Assignees & Reviewers</h5>
+                    <div class="pr-reviewers-grid">
+                      <div class="reviewer-card">
+                        <div class="user-avatar" style="width:20px; height:20px; font-size:9px">JS</div>
+                        <span>J. Srodka (Me)</span>
+                        <div class="status-dot dot-warning" style="margin-left:auto;" title="Awaiting review"></div>
+                      </div>
+                      <div class="reviewer-card">
+                        <div class="user-avatar" style="width:20px; height:20px; font-size:9px; background:#e11d48">AD</div>
+                        <span>Alex Dev</span>
+                        <div class="status-dot dot-success" style="margin-left:auto;" title="Approved"></div>
+                      </div>
+                    </div>
+                    
+                    <h5 style="font-size:11px; text-transform:uppercase; color:var(--color-text-tertiary); margin-bottom:8px; letter-spacing:0.5px">Mock Diff View</h5>
+                    <div class="diff-container" style="margin-bottom: 14px;">
+                      <div class="diff-header">server/index.ts</div>
+                      <div class="diff-body">
+                        <div class="diff-line ctx">import Fastify from 'fastify';</div>
+                        <div class="diff-line del">- // No request limiter in place</div>
+                        <div class="diff-line add">+ import rateLimit from '@fastify/rate-limit';</div>
+                        <div class="diff-line add">+ app.register(rateLimit, { max: 100, timeWindow: '1 minute' });</div>
+                      </div>
+                    </div>
+                    
+                    <div class="pr-actions-bar">
+                      <button class="btn btn-secondary">Request Changes</button>
+                      <button class="btn btn-success" onclick="approvePR('pr-card-1')">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Approve Pull Request
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ════════════════════════════════════════ -->
+        <!-- VIEW: SRE OPERATIONS -->
+        <!-- ════════════════════════════════════════ -->
+        <div id="view-sre" class="view-pane">
+          <div class="grid grid-cols-12">
+            
+            <!-- CI/CD Pipeline Health Grid -->
+            <div class="card col-span-12 accent-sre">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">CI / CD Pipeline Aggregation</div>
+                  <div class="card-subtitle">Real-time status of workflows across all monitored repositories</div>
+                </div>
+              </div>
+              
+              <div class="pipeline-grid">
+                <!-- Row 1 -->
+                <div class="pipeline-row">
+                  <div class="pipeline-info">
+                    <div class="status-dot-pulse success"></div>
+                    <span>cortexkit/api</span>
+                  </div>
+                  <div class="pipeline-bar-container">
+                    <div class="pipeline-bar">
+                      <div class="pipeline-fill success" style="width: 94%;"></div>
+                    </div>
+                    <span class="pipeline-pct">94%</span>
+                  </div>
+                  <div class="pipeline-runs">142 total runs</div>
+                  <div class="pipeline-duration">3.8m avg duration</div>
+                  <div class="pipeline-last text-success">✅ 2h ago</div>
+                  <div class="icon-btn" style="width:24px; height:24px; border:none; background:transparent">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                  </div>
+                </div>
+                
+                <!-- Row 2 -->
+                <div class="pipeline-row" id="sre-pipeline-dashboard-row">
+                  <div class="pipeline-info">
+                    <div class="status-dot-pulse error" id="sre-pipeline-dot"></div>
+                    <span>gh-dashboard</span>
+                  </div>
+                  <div class="pipeline-bar-container">
+                    <div class="pipeline-bar">
+                      <div class="pipeline-fill error" style="width: 52%;" id="sre-pipeline-bar"></div>
+                    </div>
+                    <span class="pipeline-pct" id="sre-pipeline-text">52%</span>
+                  </div>
+                  <div class="pipeline-runs">34 total runs</div>
+                  <div class="pipeline-duration">2.1m avg duration</div>
+                  <div class="pipeline-last text-error" id="sre-pipeline-status-text">❌ failing now</div>
+                  <div class="icon-btn" style="width:24px; height:24px; border:none; background:transparent">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- AI Troubleshooter Terminal (NEW P0 SRE Feature!) -->
+            <div class="card col-span-12 ai-troubleshooter-box">
+              <div class="ai-troubleshooter-header">
+                <div class="ai-troubleshooter-title">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                  </svg>
+                  Active Incident Log: <code>gh-dashboard/workflows/typecheck.yml</code>
+                </div>
+                <button class="btn btn-primary" id="btn-diagnose" onclick="triggerDiagnosis()">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9.813 15.904L9 21m0 0l-.813-5.096M9 21h3.375c.621 0 1.125-.504 1.125-1.125V18M9 21H5.625M9 6h.008v.008H9V6zm5.625.75H15M9 9h.008v.008H9V9zm5.625 0H15M9 12h.008v.008H9V12zm5.625 0H15M9 15h.008v.008H9V15zm5.625 0H15M2.25 12a9.75 9.75 0 0115.008-8.25M2.25 12a9.75 9.75 0 0015.008 8.25M17.25 12h4.5m0 0l-2.25-2.25M21.75 12l-2.25 2.25"></path>
+                  </svg>
+                  Troubleshoot Build
+                </button>
+              </div>
+              
+              <div class="log-terminal" id="sre-log-terminal">
+                <div class="log-line">[2026-05-24T18:30:05] Running build command: npm run build</div>
+                <div class="log-line">[2026-05-24T18:30:10] > tsc -b && vite build</div>
+                <div class="log-line error" id="log-trigger-line">[2026-05-24T18:30:12] src/lib/scoring.ts:1083:39 - error TS2307: Cannot find module '@/lib/scoring' or its corresponding type declarations.</div>
+                <div class="log-line error">[2026-05-24T18:30:12] 1083: import { computeAttentionScore, type InboxItem } from '@/lib/scoring';</div>
+                <div class="log-line error">[2026-05-24T18:30:12]                                                       ~~~~~~~~~~~~~~~</div>
+                <div class="log-line">[2026-05-24T18:30:12] Found 1 compile error. Build failed.</div>
+              </div>
+              
+              <!-- AI Diagnostics Reveal -->
+              <div class="ai-diagnostic-output" id="ai-diag-output">
+                <div class="diagnostic-bubble">
+                  <div class="diagnostic-title">AI Diagnostics Recommendation (via claude-code CLI)</div>
+                  <div class="diagnostic-text">
+                    <strong>Root Cause:</strong> The typescript build is failing because <code>src/hooks/useInboxItems.ts</code> imports <code>InboxItem</code> and <code>computeAttentionScore</code> using the absolute alias path <code>@/lib/scoring</code>. However, the path alias configuration is not resolved properly inside the TypeScript config files, or the compiler is checking modules from a relative path context.
+                    <br><br>
+                    <strong>Resolution Path:</strong> Update the import to a relative path resolver: <code>../lib/scoring</code>.
+                  </div>
+                  
+                  <div class="diff-container">
+                    <div class="diff-header">src/hooks/useInboxItems.ts</div>
+                    <div class="diff-body">
+                      <div class="diff-line ctx">import { useNotifications, usePullRequests, useIssues } from './useGitHubQuery';</div>
+                      <div class="diff-line del">- import { computeAttentionScore, type InboxItem } from '@/lib/scoring';</div>
+                      <div class="diff-line add">+ import { computeAttentionScore, type InboxItem } from '../lib/scoring';</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div style="display:flex; gap: 8px; justify-content: flex-end">
+                  <button class="btn btn-secondary">Copy Diagnostics</button>
+                  <button class="btn btn-primary" id="btn-apply-fix" onclick="applyCIPathFix()">⚡ Apply Automated Patch</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ════════════════════════════════════════ -->
+        <!-- VIEW: PM METRICS & KANBAN -->
+        <!-- ════════════════════════════════════════ -->
+        <div id="view-pm" class="view-pane">
+          <div class="grid grid-cols-12">
+            
+            <!-- Full DORA Panel -->
+            <div class="card col-span-12 accent-pm">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">DORA Delivery Catalog Metrics</div>
+                  <div class="card-subtitle">Continuous delivery velocity metrics across monitored portfolios</div>
+                </div>
+              </div>
+              
+              <div class="dora-row">
+                <div class="dora-metric-card">
+                  <div class="dora-metric-title">Deployment Frequency</div>
+                  <div class="dora-metric-value">4.2/day</div>
+                  <div class="dora-metric-rating">Elite</div>
+                </div>
+                <div class="dora-metric-card">
+                  <div class="dora-metric-title">Lead Time for Changes</div>
+                  <div class="dora-metric-value">1.4 days</div>
+                  <div class="dora-metric-rating">Elite</div>
+                </div>
+                <div class="dora-metric-card">
+                  <div class="dora-metric-title">Mean Time to Recover</div>
+                  <div class="dora-metric-value">28m</div>
+                  <div class="dora-metric-rating">Elite</div>
+                </div>
+                <div class="dora-metric-card">
+                  <div class="dora-metric-title">Change Failure Rate</div>
+                  <div class="dora-metric-value" id="sre-cfr">4.8%</div>
+                  <div class="dora-metric-rating" id="sre-cfr-rating">Elite</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Kanban Board -->
+            <div class="card col-span-12">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">Project Board: Roadmap 2026</div>
+                  <div class="card-subtitle">GitHub Projects V2 Column View mapping milestones</div>
+                </div>
+              </div>
+              
+              <div class="kanban-board">
+                <!-- Todo Column -->
+                <div class="kanban-column column-todo">
+                  <div class="kanban-column-header">
+                    <span class="kanban-column-title"><span class="dot"></span> Todo</span>
+                    <span class="kanban-column-count">3</span>
+                  </div>
+                  
+                  <div class="kanban-card">
+                    <div class="kanban-card-title">Configure Smart Polling (x-poll-interval headers)</div>
+                    <div class="kanban-card-meta">
+                      <div class="kanban-card-tags">
+                        <span class="kanban-tag tag-feature">Feature</span>
+                      </div>
+                      <span>#20</span>
+                    </div>
+                  </div>
+                  
+                  <div class="kanban-card">
+                    <div class="kanban-card-title">Implement i18n support in settings</div>
+                    <div class="kanban-card-meta">
+                      <div class="kanban-card-tags">
+                        <span class="kanban-tag tag-feature">P3</span>
+                      </div>
+                      <span>#42</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- In Progress Column -->
+                <div class="kanban-column column-progress">
+                  <div class="kanban-column-header">
+                    <span class="kanban-column-title"><span class="dot"></span> In Progress</span>
+                    <span class="kanban-column-count" id="kanban-progress-count">2</span>
+                  </div>
+                  
+                  <div class="kanban-card" id="kanban-card-build-error">
+                    <div class="kanban-card-title">Fix compilation crash on gh-dashboard import reference</div>
+                    <div class="kanban-card-meta">
+                      <div class="kanban-card-tags">
+                        <span class="kanban-tag tag-bug">Bug</span>
+                        <span class="kanban-tag tag-security" style="background:rgba(239, 68, 68, 0.15); color:#f87171">P0</span>
+                      </div>
+                      <span>#92</span>
+                    </div>
+                  </div>
+                  
+                  <div class="kanban-card">
+                    <div class="kanban-card-title">Add custom hover tooltips to engineering metrics charts</div>
+                    <div class="kanban-card-meta">
+                      <div class="kanban-card-tags">
+                        <span class="kanban-tag tag-feature">UI</span>
+                      </div>
+                      <span>#94</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Done Column -->
+                <div class="kanban-column column-done">
+                  <div class="kanban-column-header">
+                    <span class="kanban-column-title"><span class="dot"></span> Done</span>
+                    <span class="kanban-column-count" id="kanban-done-count">2</span>
+                  </div>
+                  
+                  <div class="kanban-card">
+                    <div class="kanban-card-title">Establish multi-account keychain access via token proxies</div>
+                    <div class="kanban-card-meta">
+                      <div class="kanban-card-tags">
+                        <span class="kanban-tag tag-security">Security</span>
+                      </div>
+                      <span>#12</span>
+                    </div>
+                  </div>
+                  
+                  <div class="kanban-card" id="kanban-card-resolved-fix" style="display:none">
+                    <div class="kanban-card-title">Fix compilation crash on gh-dashboard import reference</div>
+                    <div class="kanban-card-meta">
+                      <div class="kanban-card-tags">
+                        <span class="kanban-tag tag-bug">Bug</span>
+                        <span class="kanban-tag tag-security" style="background:rgba(16, 185, 129, 0.15); color:#34d399">Fixed</span>
+                      </div>
+                      <span>#92</span>
+                    </div>
+                  </div>
+                  
+                  <div class="kanban-card">
+                    <div class="kanban-card-title">Design layout desktop notifications interface</div>
+                    <div class="kanban-card-meta">
+                      <div class="kanban-card-tags">
+                        <span class="kanban-tag tag-feature">Done</span>
+                      </div>
+                      <span>#71</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </main>
+
+      <!-- ════════════════════════════════════════ -->
+      <!-- AI COPILOT WORKSPACE ASSISTANT PANEL -->
+      <!-- ════════════════════════════════════════ -->
+      <aside class="copilot-panel" id="copilot-panel">
+        <div class="copilot-header">
+          <div class="copilot-title">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9.813 15.904L9 21m0 0l-.813-5.096M9 21h3.375c.621 0 1.125-.504 1.125-1.125V18M9 21H5.625M9 6h.008v.008H9V6zm5.625.75H15M9 9h.008v.008H9V9zm5.625 0H15M9 12h.008v.008H9V12zm5.625 0H15M9 15h.008v.008H9V15zm5.625 0H15M2.25 12a9.75 9.75 0 0115.008-8.25M2.25 12a9.75 9.75 0 0015.008 8.25M17.25 12h4.5m0 0l-2.25-2.25M21.75 12l-2.25 2.25"></path>
+            </svg>
+            AI Copilot
+          </div>
+          <div class="icon-btn" style="width:24px; height:24px" onclick="toggleCopilot()" title="Collapse AI Panel">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </div>
+        </div>
+        
+        <div class="copilot-chat-history" id="copilot-chat-history">
+          <!-- Initial Assistant Message -->
+          <div class="chat-bubble assistant">
+            <span class="chat-sender">Assistant • claude-code</span>
+            <span>Welcome to the workspace copilot. Ask me questions about PR bottlenecks, pipeline logs, repository health scores, or request task summaries.</span>
+          </div>
+        </div>
+        
+        <!-- Typing indicators -->
+        <div class="typing-indicator" id="copilot-typing">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+        
+        <div class="copilot-input-area">
+          <input type="text" id="copilot-input" placeholder="Ask AI Copilot..." onkeydown="handleChatSubmit(event)">
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  <!-- Keyboard Shortcuts Help Icon -->
+  <div class="shortcuts-help-btn" onclick="alert('Keyboard Shortcuts Help:\n[1] Switch to Unified Hub\n[2] Switch to Dev Workspace\n[3] Switch to SRE Operations\n[4] Switch to PM Delivery\n[c] Toggle AI Copilot Panel\n[Esc] Dismiss panels')" title="Keyboard Shortcuts Help">?</div>
+
+  <!-- ════════════════════════════════════════ -->
+  <!-- JAVASCRIPT LOGIC -->
+  <!-- ════════════════════════════════════════ -->
+  <script>
+    // Global State
+    let currentView = 'unified';
+    let isCopilotOpen = true;
+    let unreadCount = 2;
+
+    // View Mapping Configuration
+    const VIEWS = {
+      unified: {
+        title: 'Unified Hub',
+        badge: 'Unified',
+        navId: 'nav-unified'
+      },
+      dev: {
+        title: 'Developer Workspace',
+        badge: 'Developer',
+        navId: 'nav-dev'
+      },
+      sre: {
+        title: 'SRE Operations',
+        badge: 'SRE / Platform',
+        navId: 'nav-sre'
+      },
+      pm: {
+        title: 'Product Delivery Metrics',
+        badge: 'PM / Metrics',
+        navId: 'nav-pm'
+      }
+    };
+
+    // Simulated Chat Responses Database
+    const CHAT_RESPONSES = {
+      default: "I can help with code changes, build checks, and DORA tracking. Try asking 'Which PR is failing?' or 'Show DORA metrics for this week'.",
+      "failing": "The repository <code>gh-dashboard</code> is failing on type checks (Line 1083 in <code>src/hooks/useInboxItems.ts</code>). You can diagnose and resolve this immediately inside the **SRE Operations** dashboard tab.",
+      "pr": "You have two pending items. PR #142 (cortexkit/api) is failing checks. PR #89 (gh-dashboard) is approved by Alex Dev and is awaiting your final review.",
+      "dora": "Our deployment frequency is Elite at **4.2/day**. The change failure rate is currently at **4.8%** across all monitored services, which is well within our 5% SLA.",
+      "help": "Available options:\n- 'Which PR is failing?'\n- 'Show active reviews'\n- 'DORA stats'"
+    };
+
+    // Tab Switching Logic
+    function switchView(viewId) {
+      if (!VIEWS[viewId]) return;
+      
+      // Update UI active links
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      document.getElementById(VIEWS[viewId].navId).classList.add('active');
+      
+      // Update headings
+      document.getElementById('perspective-title').textContent = VIEWS[viewId].title;
+      document.getElementById('perspective-badge').textContent = VIEWS[viewId].badge;
+      
+      // Toggle views
+      document.querySelectorAll('.view-pane').forEach(pane => pane.classList.remove('active'));
+      document.getElementById(`view-${viewId}`).classList.add('active');
+      
+      currentView = viewId;
+    }
+
+    // Connect Sidebar Items
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        switchView(item.getAttribute('data-view'));
+      });
+    });
+
+    // Toggle Right Copilot Drawer
+    function toggleCopilot() {
+      const panel = document.getElementById('copilot-panel');
+      isCopilotOpen = !isCopilotOpen;
+      if (isCopilotOpen) {
+        panel.classList.remove('collapsed');
+      } else {
+        panel.classList.add('collapsed');
+      }
+    }
+
+    document.getElementById('copilot-toggle-btn').addEventListener('click', toggleCopilot);
+
+    // Keyboard Shortcuts (1-4, c, esc)
+    document.addEventListener('keydown', (e) => {
+      // Don't trigger if user is typing in inputs
+      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+        if (e.key === 'Escape') {
+          document.activeElement.blur();
+        }
+        return;
+      }
+      
+      if (e.key === '1') switchView('unified');
+      if (e.key === '2') switchView('dev');
+      if (e.key === '3') switchView('sre');
+      if (e.key === '4') switchView('pm');
+      if (e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        toggleCopilot();
+        if (isCopilotOpen) {
+          document.getElementById('copilot-input').focus();
+        }
+      }
+      if (e.key === 'Escape') {
+        if (isCopilotOpen) toggleCopilot();
+      }
+    });
+
+    // Archive Inbox Item Action
+    function archiveRow(rowId, companionId) {
+      const el = document.getElementById(rowId);
+      if (el) {
+        el.classList.add('archiving');
+        setTimeout(() => {
+          el.remove();
+          unreadCount = Math.max(0, unreadCount - 1);
+          updateNotifBadge();
+        }, 400);
+      }
+      
+      if (companionId) {
+        const comp = document.getElementById(companionId);
+        if (comp) comp.remove();
+      }
+    }
+
+    function updateNotifBadge() {
+      const btn = document.getElementById('notif-btn');
+      const inboxPill = document.getElementById('inbox-remaining-pill');
+      if (unreadCount === 0) {
+        btn.classList.remove('badge');
+        if (inboxPill) inboxPill.textContent = 'All Caught Up!';
+      } else {
+        if (inboxPill) inboxPill.textContent = `${unreadCount} items pending`;
+      }
+    }
+
+    // Toggle Expandable PR Row Cards
+    function togglePR(cardId) {
+      const card = document.getElementById(cardId);
+      card.classList.toggle('expanded');
+    }
+
+    function approvePR(cardId) {
+      alert("PR #89 approved successfully. Merge trigger sent.");
+      const card = document.getElementById(cardId);
+      card.style.opacity = '0.5';
+      setTimeout(() => {
+        card.remove();
+      }, 500);
+    }
+
+    // SRE SRE Incident Troubleshooter Flow
+    function triggerDiagnosis() {
+      const terminal = document.getElementById('sre-log-terminal');
+      const output = document.getElementById('ai-diag-output');
+      const btn = document.getElementById('btn-diagnose');
+      
+      // Step 1: Simulate log scroll analysis
+      btn.disabled = true;
+      btn.textContent = 'Scanning logs...';
+      
+      let scrollTimer = setInterval(() => {
+        terminal.scrollTop += 15;
+        if (terminal.scrollTop >= (terminal.scrollHeight - terminal.clientHeight)) {
+          clearInterval(scrollTimer);
+          
+          // Show diagnostics
+          setTimeout(() => {
+            btn.textContent = 'Diagnostics Ready';
+            output.classList.add('active');
+            // Auto scroll main viewport to reveal diagnostics
+            document.querySelector('.main-content').scrollTop = 500;
+          }, 600);
+        }
+      }, 50);
+    }
+
+    function applyCIPathFix() {
+      const fixBtn = document.getElementById('btn-apply-fix');
+      fixBtn.disabled = true;
+      fixBtn.textContent = 'Applying fix...';
+      
+      setTimeout(() => {
+        fixBtn.textContent = 'Triggering runner...';
+        
+        // Update CI display state to Running, then Success!
+        const pipelineStatus = document.getElementById('sre-pipeline-status-text');
+        const pipelineDot = document.getElementById('sre-pipeline-dot');
+        const pipelineBar = document.getElementById('sre-pipeline-bar');
+        const pipelinePct = document.getElementById('sre-pipeline-text');
+        
+        const dashboardDot = document.getElementById('dashboard-pipeline-dot');
+        const dashboardBar = document.getElementById('dashboard-pipeline-bar');
+        const dashboardPct = document.getElementById('dashboard-pipeline-text');
+        
+        const dashboardRow = document.getElementById('pipeline-dashboard-row');
+        const sreRow = document.getElementById('sre-pipeline-dashboard-row');
+        
+        // Transition SRE view
+        pipelineStatus.textContent = '⚙️ running check...';
+        pipelineStatus.className = 'pipeline-last text-warning';
+        pipelineDot.className = 'status-dot-pulse warning';
+        pipelineBar.className = 'pipeline-fill warning';
+        pipelineBar.style.width = '70%';
+        pipelinePct.textContent = '70%';
+        
+        // Transition Unified view
+        dashboardDot.className = 'status-dot-pulse warning';
+        dashboardBar.className = 'pipeline-fill warning';
+        dashboardBar.style.width = '70%';
+        dashboardPct.textContent = '70%';
+        
+        setTimeout(() => {
+          // Success state
+          pipelineStatus.textContent = '✅ success 1s ago';
+          pipelineStatus.className = 'pipeline-last text-success';
+          pipelineDot.className = 'status-dot-pulse success';
+          pipelineBar.className = 'pipeline-fill success';
+          pipelineBar.style.width = '100%';
+          pipelinePct.textContent = '100%';
+          
+          dashboardDot.className = 'status-dot-pulse success';
+          dashboardBar.className = 'pipeline-fill success';
+          dashboardBar.style.width = '100%';
+          dashboardPct.textContent = '100%';
+          
+          // DORA metrics adjustment
+          document.getElementById('metrics-cfr').textContent = '2.1%';
+          document.getElementById('metrics-cfr').style.color = 'var(--color-success)';
+          document.getElementById('sre-cfr').textContent = '2.1%';
+          
+          // Resolve Kanban board issue
+          document.getElementById('kanban-card-build-error').remove();
+          document.getElementById('kanban-card-resolved-fix').style.display = 'block';
+          document.getElementById('kanban-progress-count').textContent = '1';
+          document.getElementById('kanban-done-count').textContent = '3';
+          
+          fixBtn.textContent = 'Patch Successful';
+          fixBtn.classList.remove('btn-primary');
+          fixBtn.classList.add('btn-success');
+          
+          // Notify SRE
+          alert("Auto-Patch merged successfully. Build checker resolved pipeline: gh-dashboard check suite returned SUCCESS.");
+        }, 2500);
+        
+      }, 1500);
+    }
+
+    // Copilot Chat Panel Input handling
+    function handleChatSubmit(e) {
+      if (e.key === 'Enter') {
+        const input = document.getElementById('copilot-input');
+        const query = input.value.trim();
+        if (!query) return;
+        
+        appendChatMessage('user', query);
+        input.value = '';
+        
+        // Trigger simulated agent response
+        triggerAgentResponse(query);
+      }
+    }
+
+    function appendChatMessage(sender, text) {
+      const history = document.getElementById('copilot-chat-history');
+      const bubble = document.createElement('div');
+      
+      const senderLabel = sender === 'user' ? 'You' : 'Assistant • claude-code';
+      bubble.className = `chat-bubble ${sender}`;
+      bubble.innerHTML = `
+        <span class="chat-sender">${senderLabel}</span>
+        <span>${text}</span>
+      `;
+      
+      history.appendChild(bubble);
+      history.scrollTop = history.scrollHeight;
+    }
+
+    function triggerAgentResponse(query) {
+      const typing = document.getElementById('copilot-typing');
+      typing.classList.add('active');
+      
+      const history = document.getElementById('copilot-chat-history');
+      history.scrollTop = history.scrollHeight;
+      
+      // Match query keywords
+      let responseText = CHAT_RESPONSES.default;
+      const lower = query.toLowerCase();
+      
+      if (lower.includes('fail') || lower.includes('error') || lower.includes('broken') || lower.includes('incident')) {
+        responseText = CHAT_RESPONSES.failing;
+      } else if (lower.includes('pr') || lower.includes('review') || lower.includes('pull')) {
+        responseText = CHAT_RESPONSES.pr;
+      } else if (lower.includes('dora') || lower.includes('metric') || lower.includes('stats') || lower.includes('frequency')) {
+        responseText = CHAT_RESPONSES.dora;
+      } else if (lower.includes('help') || lower.includes('how') || lower.includes('features')) {
+        responseText = CHAT_RESPONSES.help;
+      }
+      
+      setTimeout(() => {
+        typing.classList.remove('active');
+        appendChatMessage('assistant', responseText);
+      }, 1200 + Math.random() * 800);
+    }
+  </script>
+</body>
+</html>
