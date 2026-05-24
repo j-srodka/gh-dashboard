@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -9,23 +9,22 @@ import {
   useMarkAllNotificationsRead,
   useCIHealth,
   useEngineeringMetrics,
+  useNotifications,
 } from '@/hooks/useGitHubQuery';
-import { useInboxItems } from '@/hooks/useInboxItems';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useMonitoredRepos } from '@/hooks/useMonitoredRepos';
+import { useAIAsk } from '@/hooks/useAIAsk';
 
 import {
-  GitPullRequest,
-  CircleDot,
   Activity,
-  AlertTriangle,
   CheckCheck,
   Loader2,
   RefreshCw,
   Sparkles,
   ChevronRight,
-  ShieldCheck,
   TrendingUp,
+  Bot,
+  Send,
 } from 'lucide-react';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -106,6 +105,122 @@ function QuickActionsBar() {
   );
 }
 
+function AIAssistantCard({ aiAgent }: { aiAgent: string }) {
+  const [input, setInput] = useState('');
+  const [history, setHistory] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+  const askMutation = useAIAsk();
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  const handleSubmit = async () => {
+    const q = input.trim();
+    if (!q || askMutation.isPending) return;
+    setInput('');
+    setHistory((prev) => [...prev, { role: 'user', content: q }]);
+    try {
+      const result = await askMutation.mutateAsync(q);
+      setHistory((prev) => [...prev, { role: 'assistant', content: result.response || result.error || 'No response' }]);
+    } catch {
+      setHistory((prev) => [...prev, { role: 'assistant', content: 'Request failed. Check the server is running.' }]);
+    }
+  };
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [history]);
+
+  return (
+    <div
+      className="col-span-12 lg:col-span-8 rounded-2xl border p-6 shadow-sm flex flex-col h-[350px]"
+      style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
+    >
+      <div className="flex items-center justify-between mb-4 pb-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
+        <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+          <Bot className="w-4 h-4" style={{ color: 'var(--color-brand)' }} />
+          AI Copilot Workspace Assistant
+        </h2>
+        <span
+          className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full"
+          style={{ background: 'var(--color-surface-tertiary)', color: 'var(--color-text-secondary)' }}
+        >
+          Agent: {aiAgent}
+        </span>
+      </div>
+
+      {/* Chat History */}
+      <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-1 scrollbar-thin">
+        {history.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-center py-6">
+            <Bot className="w-8 h-8 mb-2 opacity-40" style={{ color: 'var(--color-brand)' }} />
+            <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>Your GitHub Copilot</p>
+            <p className="text-xs max-w-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+              Ask questions about pull requests, repository statuses, or troubleshoot logs using your active agent CLI.
+            </p>
+          </div>
+        )}
+        {history.map((msg, i) => (
+          <div key={i} className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'items-start'}`}>
+            {msg.role === 'assistant' && (
+              <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 border" style={{ borderColor: 'var(--color-border)' }}>
+                <Bot className="w-3.5 h-3.5" style={{ color: 'var(--color-brand)' }} />
+              </div>
+            )}
+            <div
+              className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed ${
+                msg.role === 'user'
+                  ? 'bg-gradient-brand text-white rounded-tr-none'
+                  : 'rounded-tl-none border'
+              }`}
+              style={{
+                background: msg.role === 'user' ? undefined : 'var(--color-surface-secondary)',
+                borderColor: msg.role === 'user' ? undefined : 'var(--color-border)',
+                color: msg.role === 'user' ? undefined : 'var(--color-text-primary)',
+              }}
+            >
+              <pre className="whitespace-pre-wrap font-sans break-words m-0">{msg.content}</pre>
+            </div>
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input Form */}
+      <div className="flex items-center gap-2 pt-3 border-t" style={{ borderColor: 'var(--color-border)' }}>
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit();
+            }
+          }}
+          placeholder="Ask AI Copilot to check PR status, summarize active repos..."
+          disabled={askMutation.isPending}
+          className="flex-1 min-w-0 rounded-xl border px-3 py-2 text-xs outline-none transition-colors"
+          style={{
+            background: 'var(--color-surface-secondary)',
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text-primary)',
+          }}
+        />
+        <button
+          onClick={handleSubmit}
+          disabled={!input.trim() || askMutation.isPending}
+          className="w-8 h-8 rounded-xl flex items-center justify-center text-white transition-opacity disabled:opacity-40 shrink-0 bg-gradient-brand"
+          title="Send message"
+        >
+          {askMutation.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Send className="w-4 h-4" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Redesigned Overview Page ───────────────────────────────────────────
 
 export function OverviewPage() {
@@ -117,10 +232,8 @@ export function OverviewPage() {
   const { data: prData } = usePullRequests(monitoredRepos);
   const { data: mergeData } = useRecentMerges(monitoredRepos);
   const { data: failingData } = useFailingWorkflows(monitoredRepos);
+  const { data: notificationsData } = useNotifications();
 
-  // 1. Triage Inbox items (attention score normalized)
-  const { items: allInboxItems = [], critical: criticalItems = [], isLoading: inboxLoading } = useInboxItems(monitoredRepos);
-  const inboxItems = allInboxItems.slice(0, 3); // High-priority 3 items
 
   // 2. CI Pipeline Health
   const { data: ciHealthData, isLoading: ciLoading } = useCIHealth(monitoredRepos);
@@ -128,6 +241,7 @@ export function OverviewPage() {
 
   // 3. DORA Metrics Repo Selector state
   const [selectedDoraRepo, setSelectedDoraRepo] = useLocalStorage<string>('overviewDoraRepo', '');
+  const [aiAgent] = useLocalStorage<string>('aiAgent', 'auto');
   
   const repos = useMemo(() => {
     return monitoredRepos.length > 0
@@ -158,7 +272,7 @@ export function OverviewPage() {
   const prCount = (prData || []).length;
   const mergeCount = (mergeData || []).length;
   const failingCount = (failingData || []).length;
-  const criticalCount = criticalItems.length;
+  const criticalCount = (notificationsData || []).filter((n: any) => n.unread).length;
 
   const aiPrompt = useMemo(() => {
     if (repoCount === 0) return '';
@@ -271,102 +385,8 @@ export function OverviewPage() {
           </div>
         </div>
 
-        {/* 2. Scored Triage Inbox Widget (Col-span-8) */}
-        <div
-          className="col-span-12 lg:col-span-8 rounded-2xl border p-6 shadow-sm flex flex-col"
-          style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
-        >
-          <div className="flex items-center justify-between mb-4 pb-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
-            <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
-              <GitPullRequest className="w-4 h-4" style={{ color: 'var(--color-brand)' }} />
-              Triage Inbox & Review Queue
-            </h2>
-            <button
-              onClick={() => navigate('/review-queue')}
-              className="text-xs font-semibold flex items-center gap-0.5 hover:underline"
-              style={{ color: 'var(--color-brand)' }}
-            >
-              Go to Inbox
-              <ChevronRight className="w-3 h-3" />
-            </button>
-          </div>
-
-          <div className="flex-1 space-y-3">
-            {inboxLoading ? (
-              <div className="flex items-center justify-center py-12" style={{ color: 'var(--color-text-tertiary)' }}>
-                <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                Loading priority queue...
-              </div>
-            ) : inboxItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <CheckCheck className="w-8 h-8 mb-2" style={{ color: 'var(--color-success)' }} />
-                <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>Inbox Fully Cleared</p>
-                <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>All caught up! No triage items require attention.</p>
-              </div>
-            ) : (
-              inboxItems.map((item: any) => {
-                const scoreColor =
-                  item.tone === 'red'
-                    ? 'rgba(239, 68, 68, 0.15)'
-                    : item.tone === 'amber'
-                      ? 'rgba(245, 158, 11, 0.15)'
-                      : 'rgba(16, 185, 129, 0.15)';
-                const scoreText =
-                  item.tone === 'red'
-                    ? 'var(--color-error)'
-                    : item.tone === 'amber'
-                      ? 'var(--color-warning)'
-                      : 'var(--color-success)';
-
-                return (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between p-3.5 rounded-xl border transition-all hover:translate-x-1 cursor-pointer hover:border-slate-300 dark:hover:border-slate-700"
-                    style={{ background: 'var(--color-surface-secondary)', borderColor: 'var(--color-border)' }}
-                    onClick={() => {
-                      if (item.source === 'review-request') {
-                        navigate('/review-queue');
-                      } else if (item.source === 'issue') {
-                        navigate('/issues');
-                      } else {
-                        window.open(item.url, '_blank', 'noopener,noreferrer');
-                      }
-                    }}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      {item.type === 'pr' ? (
-                        <GitPullRequest className="w-4 h-4 shrink-0" style={{ color: 'var(--color-brand)' }} />
-                      ) : item.type === 'issue' ? (
-                        <CircleDot className="w-4 h-4 shrink-0" style={{ color: 'var(--color-warning)' }} />
-                      ) : item.type === 'ci' ? (
-                        <AlertTriangle className="w-4 h-4 shrink-0" style={{ color: 'var(--color-error)' }} />
-                      ) : (
-                        <ShieldCheck className="w-4 h-4 shrink-0" style={{ color: 'var(--color-success)' }} />
-                      )}
-                      
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
-                          {item.title}
-                        </div>
-                        <div className="text-[11px] mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>
-                          {item.repo} • {item.author ? `@${item.author}` : 'system'}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div
-                      className="text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0 ml-4"
-                      style={{ background: scoreColor, color: scoreText }}
-                    >
-                      {item.tone === 'red' && <AlertTriangle className="w-3 h-3" />}
-                      Score: {item.score}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
+        {/* 2. AI Assistant Card (Col-span-8) */}
+        <AIAssistantCard aiAgent={aiAgent} />
 
         {/* 3. CI Operational Health Widget (Col-span-4) */}
         <div

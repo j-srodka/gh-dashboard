@@ -9,10 +9,11 @@ export interface AskResult {
 export function useAIAsk() {
   return useMutation({
     mutationFn: async (prompt: string): Promise<AskResult> => {
+      const agentCli = localStorage.getItem('aiAgent') || 'auto';
       const res = await fetch('/api/ai/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, agentCli }),
       });
       if (!res.ok) {
         const text = await res.text();

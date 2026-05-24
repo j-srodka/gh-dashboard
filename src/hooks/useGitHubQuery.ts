@@ -15,8 +15,8 @@ export function usePullRequests(monitoredRepos?: string[]) {
     ? `+repo:${monitoredRepos.join(',')}`
     : '';
   return useQuery({
-    queryKey: ['pulls', 'author', monitoredRepos],
-    queryFn: () => githubGet<any>(`search/issues?q=is:pr+is:open+author:@me${repoFilter}&sort=updated&per_page=100`),
+    queryKey: ['pulls', 'all', monitoredRepos],
+    queryFn: () => githubGet<any>(`search/issues?q=is:pr+is:open${repoFilter}&sort=updated&per_page=100`),
     select: (data: any) => data.items || [],
   });
 }
@@ -33,7 +33,7 @@ export function useReviewRequests(monitoredRepos?: string[]) {
 }
 
 export function useIssues(monitoredRepos?: string[]) {
-  return useQuery({
+  return useQuery<any, Error, any[]>({
     queryKey: ['issues', monitoredRepos],
     queryFn: () => githubGet<any>('issues?filter=assigned&state=open&per_page=100'),
     select: (data: any) => {
@@ -64,6 +64,9 @@ export function useNotifications() {
     queryKey: ['notifications', 'all'],
     queryFn: async () => {
       const response = await githubGetResponse('notifications?per_page=50&all=true');
+      if (!response.ok) {
+        throw new Error(`GitHub API ${response.status}: ${response.statusText}`);
+      }
       const headerVal = response.headers.get('x-poll-interval');
       if (headerVal) {
         const seconds = parseInt(headerVal, 10);
