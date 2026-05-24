@@ -76,6 +76,10 @@ docker-compose.yml
 .beads/issues.jsonl
 .sisyphus/
 
+# Generated agent config files (context-mode routing rules)
+AGENTS-context-mode.md
+GEMINI.md
+
 # local agent files
 .claude/*
 .cursor/*review/
