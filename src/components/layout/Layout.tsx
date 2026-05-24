@@ -38,20 +38,30 @@ import {
 
 const NAV_SECTIONS: { title: string; items: { path: string; label: string; icon: React.ElementType }[] }[] = [
   {
-    title: 'Navigation',
+    title: 'Workspace',
     items: [
       { path: '/', label: 'Overview', icon: LayoutDashboard },
+      { path: '/review-queue', label: 'Review Queue', icon: Eye },
+      { path: '/notifications', label: 'Notifications', icon: BellRing },
+      { path: '/pull-requests', label: 'Pull Requests', icon: GitPullRequest },
+      { path: '/issues', label: 'Issues', icon: CircleDot },
+    ],
+  },
+  {
+    title: 'Catalog',
+    items: [
       { path: '/repositories', label: 'Repositories', icon: FolderGit2 },
+      { path: '/kanban', label: 'Kanban', icon: Kanban },
+    ],
+  },
+  {
+    title: 'Metrics & CI',
+    items: [
+      { path: '/ci-health', label: 'CI Health', icon: Activity },
+      { path: '/actions', label: 'Actions', icon: PlayCircle },
       { path: '/insights', label: 'Insights', icon: BarChart3 },
       { path: '/digest', label: 'Digest', icon: Newspaper },
-      { path: '/pull-requests', label: 'Pull Requests', icon: GitPullRequest },
-      { path: '/review-queue', label: 'Review Queue', icon: Eye },
-      { path: '/actions', label: 'Actions', icon: PlayCircle },
-      { path: '/ci-health', label: 'CI Health', icon: Activity },
-      { path: '/issues', label: 'Issues', icon: CircleDot },
-      { path: '/notifications', label: 'Notifications', icon: BellRing },
       { path: '/security', label: 'Security', icon: ShieldCheck },
-      { path: '/kanban', label: 'Kanban', icon: Kanban },
     ],
   },
   {

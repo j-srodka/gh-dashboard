@@ -1,279 +1,63 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   useRepos,
   usePullRequests,
-  useIssues,
-  useReviewRequests,
-  useEvents,
   useRecentMerges,
   useFailingWorkflows,
   useMarkAllNotificationsRead,
+  useCIHealth,
+  useEngineeringMetrics,
 } from '@/hooks/useGitHubQuery';
+import { useInboxItems } from '@/hooks/useInboxItems';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useMonitoredRepos } from '@/hooks/useMonitoredRepos';
-import { Badge, StatusDot, StatCard } from '@/components/ui';
-import { LANGUAGE_COLORS } from '@/lib/constants';
+
 import {
   GitPullRequest,
-  Eye,
   CircleDot,
   Activity,
-  FolderGit2,
   AlertTriangle,
-  GitMerge,
-  GitCommit,
-  CalendarCheck,
-  XCircle,
-  CheckCircle2,
-  Pin,
-  RefreshCw,
   CheckCheck,
   Loader2,
+  RefreshCw,
+  Sparkles,
+  ChevronRight,
+  ShieldCheck,
+  TrendingUp,
 } from 'lucide-react';
-import { useMemo } from 'react';
 
-function PinnedReposSection() {
-  const navigate = useNavigate();
-  const { data: repoData } = useRepos();
-  const [pinnedRepos] = useLocalStorage<string[]>('pinnedRepos', []);
+// ── Types ────────────────────────────────────────────────────────────────────
 
-  const pinned = (repoData || []).filter((r: any) => pinnedRepos.includes(r.full_name));
-
-  if (pinned.length === 0) return null;
-
-  return (
-    <div className="rounded-xl border p-5 mb-6" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-      <div className="flex items-center gap-2 mb-3">
-        <Pin className="w-4 h-4" style={{ color: 'var(--color-warning)' }} />
-        <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>Pinned Repositories</h2>
-      </div>
-      <div className="space-y-1">
-        {pinned.map((r: any) => (
-          <div
-            key={r.id}
-            className="flex items-center gap-3 py-2 px-3 rounded-lg cursor-pointer transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/50"
-            onClick={() => navigate('/repositories')}
-          >
-            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: LANGUAGE_COLORS[r.language] || '#94a3b8' }} />
-            <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>{r.full_name}</span>
-            <span className="text-xs ml-auto flex-shrink-0" style={{ color: 'var(--color-text-tertiary)' }}>
-              {r.open_issues_count} open issues
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+interface AskResult {
+  response: string;
+  error?: string;
+  agentUsed?: string;
 }
 
-function PlanMyDayCard() {
-  const navigate = useNavigate();
-  const { monitoredRepos } = useMonitoredRepos();
-  const { data: prData } = usePullRequests(monitoredRepos);
-  const { data: issueData } = useIssues(monitoredRepos);
-  const { data: reviewData } = useReviewRequests(monitoredRepos);
-  const { data: eventData } = useEvents();
+// ── Custom Hooks ─────────────────────────────────────────────────────────────
 
-  const prs = prData || [];
-  const issues = issueData || [];
-  const reviews = reviewData || [];
-  const events = eventData || [];
-
-  const prsNeedingAttention = prs.filter((p: any) => p.draft !== true && (p.review_comments > 0 || p.comments > 0));
-  const myIssues = issues.filter((i: any) => !i.assignee || i.assignee?.login === 'alexkim');
-  const reviewRequests = reviews.length;
-  const newActivity = events.filter((e: any) => ['PullRequestEvent', 'IssuesEvent', 'PushEvent'].includes(e.type)).slice(0, 3);
-
-  return (
-    <div className="rounded-xl border p-5 mb-6" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>Plan My Day</h2>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>Prioritized based on your involvement</p>
-        </div>
-        <CalendarCheck className="w-5 h-5" style={{ color: 'var(--color-brand)' }} />
-      </div>
-
-      <div className="space-y-4">
-        {reviewRequests > 0 && (
-          <div className="flex items-start gap-3">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--color-warning-light)' }}>
-              <Eye className="w-3.5 h-3.5" style={{ color: 'var(--color-warning)' }} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                {reviewRequests} PR{reviewRequests > 1 ? 's' : ''} waiting for your review
-              </div>
-              <div className="flex items-center gap-2 mt-1.5">
-                <button
-                  onClick={() => navigate('/pull-requests')}
-                  className="text-xs px-2.5 py-1 rounded-md transition-colors hover:opacity-90"
-                  style={{ background: 'var(--color-brand)', color: '#fff' }}
-                >
-                  View PRs
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {prsNeedingAttention.length > 0 && (
-          <div className="flex items-start gap-3">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--color-info-light)' }}>
-              <GitPullRequest className="w-3.5 h-3.5" style={{ color: 'var(--color-info)' }} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                {prsNeedingAttention.length} of your PRs need follow-up
-              </div>
-              <div className="mt-1.5 space-y-1">
-                {prsNeedingAttention.slice(0, 2).map((p: any) => (
-                  <div key={p.id} className="flex items-center gap-2 text-xs">
-                    <StatusDot status={p.state === 'open' ? 'success' : 'pending'} />
-                    <span className="truncate" style={{ color: 'var(--color-text-secondary)' }}>{p.title}</span>
-                    <Badge variant="neutral">{p.base?.repo?.name || 'repo'}</Badge>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {myIssues.length > 0 && (
-          <div className="flex items-start gap-3">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--color-error-light)' }}>
-              <CircleDot className="w-3.5 h-3.5" style={{ color: 'var(--color-error)' }} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                {myIssues.length} assigned issue{myIssues.length > 1 ? 's' : ''}
-              </div>
-              <div className="mt-1.5 space-y-1">
-                {myIssues.slice(0, 2).map((i: any) => (
-                  <div key={i.id} className="flex items-center gap-2 text-xs">
-                    <StatusDot status={i.state === 'open' ? 'error' : 'success'} />
-                    <span className="truncate" style={{ color: 'var(--color-text-secondary)' }}>{i.title}</span>
-                    <Badge variant="neutral">{i.repository?.name || 'repo'}</Badge>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {newActivity.length > 0 && (
-          <div className="flex items-start gap-3">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'var(--color-success-light)' }}>
-              <Activity className="w-3.5 h-3.5" style={{ color: 'var(--color-success)' }} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>Recent activity</div>
-              <div className="mt-1.5 space-y-1">
-                {newActivity.map((e: any, i: number) => (
-                  <div key={i} className="flex items-center gap-2 text-xs">
-                    <StatusDot status="pending" />
-                    <span style={{ color: 'var(--color-text-secondary)' }}>
-                      {e.type?.replace('Event', '')} in {e.repo?.name}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2 mt-4 pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
-        <button
-          onClick={() => navigate('/pull-requests')}
-          className="flex-1 text-xs py-1.5 px-2 rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
-          style={{ color: 'var(--color-text-secondary)' }}
-        >
-          View PRs
-        </button>
-        <button
-          onClick={() => navigate('/actions')}
-          className="flex-1 text-xs py-1.5 px-2 rounded-md transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
-          style={{ color: 'var(--color-text-secondary)' }}
-        >
-          View Actions
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ActivityFeed() {
-  const { data: eventData } = useEvents();
-
-  const activityItems = (eventData || []).slice(0, 8).map((e: any) => {
-    const repo = e.repo?.name || 'unknown';
-    const actor = e.actor?.login || 'unknown';
-    const time = new Date(e.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    switch (e.type) {
-      case 'PullRequestEvent':
-        return { icon: GitPullRequest, color: 'var(--color-info)', text: `${e.payload?.action || 'opened'} PR in ${repo}`, repo, actor, time, type: 'pr' };
-      case 'IssuesEvent':
-        return { icon: CircleDot, color: 'var(--color-error)', text: `${e.payload?.action || 'opened'} issue in ${repo}`, repo, actor, time, type: 'issue' };
-      case 'PushEvent':
-        return { icon: GitCommit, color: 'var(--color-brand)', text: `Pushed ${e.payload?.commits?.length || 0} commits to ${repo}`, repo, actor, time, type: 'push' };
-      case 'CreateEvent':
-        return { icon: CheckCircle2, color: 'var(--color-success)', text: `Created ${e.payload?.ref_type || 'ref'} in ${repo}`, repo, actor, time, type: 'create' };
-      case 'DeleteEvent':
-        return { icon: XCircle, color: 'var(--color-error)', text: `Deleted ${e.payload?.ref_type || 'ref'} in ${repo}`, repo, actor, time, type: 'delete' };
-      default:
-        return { icon: Activity, color: 'var(--color-brand)', text: `${e.type?.replace('Event', '') || 'Activity'} in ${repo}`, repo, actor, time, type: 'activity' };
-    }
+function useAIStandupQuery(prompt: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['ai-standup', prompt],
+    queryFn: async (): Promise<AskResult> => {
+      const res = await fetch('/api/ai/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+      if (!res.ok) {
+        throw new Error('AI Ask API call failed');
+      }
+      return res.json();
+    },
+    enabled: enabled && prompt.length > 0,
+    staleTime: 5 * 60 * 1000, // Cache standup digests for 5 minutes
   });
-
-  const defaultActivities = [
-    { icon: GitMerge, color: 'var(--color-success)', text: 'Merged PR #234 in auth-service', repo: 'auth-service', actor: 'Alex Kim', time: '2m ago', type: 'merge' },
-    { icon: XCircle, color: 'var(--color-error)', text: 'Tests failed in data-pipeline', repo: 'data-pipeline', actor: 'CI Bot', time: '15m ago', type: 'ci' },
-    { icon: GitCommit, color: 'var(--color-brand)', text: 'Pushed 3 commits to api-service', repo: 'api-service', actor: 'Alex Kim', time: '32m ago', type: 'push' },
-    { icon: CheckCircle2, color: 'var(--color-success)', text: 'Workflow succeeded in frontend-app', repo: 'frontend-app', actor: 'CI Bot', time: '1 hr ago', type: 'workflow' },
-  ];
-
-  const activities = activityItems.length > 0 ? activityItems : defaultActivities;
-
-  return (
-    <div
-      className="rounded-xl border p-5"
-      style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Activity className="w-5 h-5" style={{ color: 'var(--color-brand)' }} />
-          <h2 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>Activity Feed</h2>
-        </div>
-        <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Last updated 2m ago</span>
-      </div>
-      <div className="space-y-4">
-        {activities.map((a: typeof defaultActivities[0], i: number) => (
-          <div key={i} className="flex items-start gap-3">
-            <div className="flex flex-col items-center gap-1 pt-1">
-              <div className="w-2 h-2 rounded-full" style={{ background: a.color }} />
-              {i < activities.length - 1 && (
-                <div className="w-px flex-1 min-h-[2rem]" style={{ background: 'var(--color-border)' }} />
-              )}
-            </div>
-            <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: `${a.color}20` }}>
-              <a.icon className="w-3.5 h-3.5" style={{ color: a.color }} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm" style={{ color: 'var(--color-text-primary)' }}>{a.text}</div>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="neutral">{a.repo}</Badge>
-                <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>{a.actor} · {a.time}</span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
+
+// ── Sub-components ───────────────────────────────────────────────────────────
 
 function QuickActionsBar() {
   const queryClient = useQueryClient();
@@ -289,7 +73,7 @@ function QuickActionsBar() {
 
   return (
     <div
-      className="rounded-xl border p-4 mb-6 flex items-center gap-3 flex-wrap"
+      className="rounded-xl border p-4 mb-6 flex items-center gap-3 flex-wrap shadow-sm"
       style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
     >
       <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-tertiary)' }}>
@@ -322,46 +106,440 @@ function QuickActionsBar() {
   );
 }
 
+// ── Main Redesigned Overview Page ───────────────────────────────────────────
+
 export function OverviewPage() {
-  const { data: repoData } = useRepos();
+  const navigate = useNavigate();
   const { monitoredRepos } = useMonitoredRepos();
+  
+  // Data hooks for stats & DORA selection
+  const { data: repoData } = useRepos();
   const { data: prData } = usePullRequests(monitoredRepos);
   const { data: mergeData } = useRecentMerges(monitoredRepos);
   const { data: failingData } = useFailingWorkflows(monitoredRepos);
 
-  const filteredRepos = useMemo(
-    () => monitoredRepos.length > 0
+  // 1. Triage Inbox items (attention score normalized)
+  const { items: allInboxItems = [], critical: criticalItems = [], isLoading: inboxLoading } = useInboxItems(monitoredRepos);
+  const inboxItems = allInboxItems.slice(0, 3); // High-priority 3 items
+
+  // 2. CI Pipeline Health
+  const { data: ciHealthData, isLoading: ciLoading } = useCIHealth(monitoredRepos);
+  const ciList = (ciHealthData || []).slice(0, 3); // Top 3 monitored repos
+
+  // 3. DORA Metrics Repo Selector state
+  const [selectedDoraRepo, setSelectedDoraRepo] = useLocalStorage<string>('overviewDoraRepo', '');
+  
+  const repos = useMemo(() => {
+    return monitoredRepos.length > 0
       ? (repoData || []).filter((r: any) => monitoredRepos.includes(r.full_name))
-      : (repoData || []),
-    [monitoredRepos, repoData],
+      : (repoData || []);
+  }, [monitoredRepos, repoData]);
+
+  const activeDoraRepo = useMemo(() => {
+    if (selectedDoraRepo && repos.some((r: any) => r.full_name === selectedDoraRepo)) {
+      return selectedDoraRepo;
+    }
+    return repos[0]?.full_name || '';
+  }, [selectedDoraRepo, repos]);
+
+  const [doraOwner, doraRepoName] = useMemo(() => {
+    const [owner, name] = activeDoraRepo.split('/');
+    return [owner || '', name || ''];
+  }, [activeDoraRepo]);
+
+  const { data: doraMetrics, isLoading: doraLoading } = useEngineeringMetrics(
+    doraOwner,
+    doraRepoName,
+    30 // 30 days DORA metrics
   );
 
-  const repoCount = filteredRepos.length;
+  // 4. Standup digest stats for AI prompt
+  const repoCount = repos.length;
   const prCount = (prData || []).length;
   const mergeCount = (mergeData || []).length;
   const failingCount = (failingData || []).length;
+  const criticalCount = criticalItems.length;
+
+  const aiPrompt = useMemo(() => {
+    if (repoCount === 0) return '';
+    return `Generate a concise standup helper developer summary based on these active metrics for Sunday, May 24, 2026. Be brief, formatted with HTML bullet points, professional, and highlight critical priorities first:
+- Repositories monitored: ${repoCount}
+- Open PRs: ${prCount}
+- Critical triage alerts requiring attention: ${criticalCount}
+- Failed CI builds today: ${failingCount}
+- Recent merges this week: ${mergeCount}`;
+  }, [repoCount, prCount, criticalCount, failingCount, mergeCount]);
+
+  const { data: aiStandup, isLoading: aiLoading } = useAIStandupQuery(aiPrompt, repoCount > 0);
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Good morning, Alex</h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>Here&apos;s what needs your attention today.</p>
+    <div className="space-y-6">
+      {/* Dynamic Keyframes for Pulsing Status Indicators */}
+      <style>{`
+        @keyframes pulse-green {
+          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+          70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        @keyframes pulse-red {
+          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+          70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .pulse-success-dot {
+          animation: pulse-green 2s infinite;
+        }
+        .pulse-error-dot {
+          animation: pulse-red 2s infinite;
+        }
+      `}</style>
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Good morning, Alex</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>Here&apos;s your developer standup and delivery health dashboard.</p>
+        </div>
       </div>
 
       <QuickActionsBar />
 
-      <PinnedReposSection />
+      {/* Widget Grid Layout */}
+      <div className="grid grid-cols-12 gap-6">
+        
+        {/* 1. AI Standup Digest Widget (Full Width) */}
+        <div
+          className="col-span-12 rounded-2xl border p-6 relative overflow-hidden shadow-sm"
+          style={{
+            background: 'var(--color-surface)',
+            borderColor: 'var(--color-border)',
+          }}
+        >
+          {/* Top linear border indicator */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-brand" />
+          
+          <div className="flex items-center justify-between mb-4 pb-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
+            <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+              <Sparkles className="w-4 h-4 text-gradient shrink-0" style={{ color: 'var(--color-brand-start)' }} />
+              AI Developer Standup digest
+            </h2>
+            <span
+              className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full"
+              style={{ background: 'var(--color-surface-tertiary)', color: 'var(--color-text-secondary)' }}
+            >
+              Configured Agent CLI
+            </span>
+          </div>
 
-      <PlanMyDayCard />
+          <div className="flex gap-4 items-start">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm"
+              style={{
+                background: 'linear-gradient(135deg, var(--color-gradient-start), var(--color-gradient-mid))',
+              }}
+            >
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            
+            <div className="flex-1 text-sm leading-relaxed" style={{ color: 'var(--color-text-primary)' }}>
+              {aiLoading ? (
+                <div className="flex items-center gap-2 py-2" style={{ color: 'var(--color-text-secondary)' }}>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating workspace summary...
+                </div>
+              ) : aiStandup?.response ? (
+                <div 
+                  className="prose dark:prose-invert max-w-none text-sm text-text-primary"
+                  dangerouslySetInnerHTML={{ __html: aiStandup.response.replace(/\n/g, '<br />') }}
+                />
+              ) : (
+                /* Fallback Local Standby Digest */
+                <div>
+                  <p><strong>Standup Summary:</strong> Yesterday, you merged <strong>{mergeCount} PRs</strong> across your monitored repositories. Today, there are <strong>{criticalCount} critical triage tasks</strong> needing attention and <strong>{failingCount} failing checks</strong>. Here is your standup agenda:</p>
+                  <ul className="list-disc pl-5 mt-2 space-y-1" style={{ color: 'var(--color-text-secondary)' }}>
+                    <li>You have <strong>{prCount} active open PRs</strong> waiting to be merged or reviewed.</li>
+                    {criticalCount > 0 && (
+                      <li><strong>Attention needed:</strong> Resolve {criticalCount} high-attention scoring items in your Triage Inbox.</li>
+                    )}
+                    {failingCount > 0 && (
+                      <li><strong>Failing pipeline:</strong> Investigate failing CI run in your actions worklist.</li>
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatCard icon={FolderGit2} label="Total Repos" value={repoCount || 0} trend="+2 this month" trendUp trendColor="var(--color-success)" />
-        <StatCard icon={GitPullRequest} label="Open PRs" value={prCount || 0} trend="-8% from last week" trendUp={false} trendColor="var(--color-success)" />
-        <StatCard icon={AlertTriangle} label="Failing Checks" value={failingCount} trend={failingCount > 0 ? 'needs attention' : 'all green'} trendUp={failingCount > 0} trendColor={failingCount > 0 ? 'var(--color-error)' : 'var(--color-success)'} />
-        <StatCard icon={GitMerge} label="Recent Merges" value={mergeCount} trend={mergeCount > 0 ? '+this week' : 'none this week'} trendUp trendColor="var(--color-success)" />
+        {/* 2. Scored Triage Inbox Widget (Col-span-8) */}
+        <div
+          className="col-span-12 lg:col-span-8 rounded-2xl border p-6 shadow-sm flex flex-col"
+          style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
+        >
+          <div className="flex items-center justify-between mb-4 pb-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
+            <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+              <GitPullRequest className="w-4 h-4" style={{ color: 'var(--color-brand)' }} />
+              Triage Inbox & Review Queue
+            </h2>
+            <button
+              onClick={() => navigate('/review-queue')}
+              className="text-xs font-semibold flex items-center gap-0.5 hover:underline"
+              style={{ color: 'var(--color-brand)' }}
+            >
+              Go to Inbox
+              <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+
+          <div className="flex-1 space-y-3">
+            {inboxLoading ? (
+              <div className="flex items-center justify-center py-12" style={{ color: 'var(--color-text-tertiary)' }}>
+                <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                Loading priority queue...
+              </div>
+            ) : inboxItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <CheckCheck className="w-8 h-8 mb-2" style={{ color: 'var(--color-success)' }} />
+                <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>Inbox Fully Cleared</p>
+                <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>All caught up! No triage items require attention.</p>
+              </div>
+            ) : (
+              inboxItems.map((item: any) => {
+                const scoreColor =
+                  item.tone === 'red'
+                    ? 'rgba(239, 68, 68, 0.15)'
+                    : item.tone === 'amber'
+                      ? 'rgba(245, 158, 11, 0.15)'
+                      : 'rgba(16, 185, 129, 0.15)';
+                const scoreText =
+                  item.tone === 'red'
+                    ? 'var(--color-error)'
+                    : item.tone === 'amber'
+                      ? 'var(--color-warning)'
+                      : 'var(--color-success)';
+
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between p-3.5 rounded-xl border transition-all hover:translate-x-1 cursor-pointer hover:border-slate-300 dark:hover:border-slate-700"
+                    style={{ background: 'var(--color-surface-secondary)', borderColor: 'var(--color-border)' }}
+                    onClick={() => {
+                      if (item.source === 'review-request') {
+                        navigate('/review-queue');
+                      } else if (item.source === 'issue') {
+                        navigate('/issues');
+                      } else {
+                        window.open(item.url, '_blank', 'noopener,noreferrer');
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {item.type === 'pr' ? (
+                        <GitPullRequest className="w-4 h-4 shrink-0" style={{ color: 'var(--color-brand)' }} />
+                      ) : item.type === 'issue' ? (
+                        <CircleDot className="w-4 h-4 shrink-0" style={{ color: 'var(--color-warning)' }} />
+                      ) : item.type === 'ci' ? (
+                        <AlertTriangle className="w-4 h-4 shrink-0" style={{ color: 'var(--color-error)' }} />
+                      ) : (
+                        <ShieldCheck className="w-4 h-4 shrink-0" style={{ color: 'var(--color-success)' }} />
+                      )}
+                      
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
+                          {item.title}
+                        </div>
+                        <div className="text-[11px] mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>
+                          {item.repo} • {item.author ? `@${item.author}` : 'system'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      className="text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0 ml-4"
+                      style={{ background: scoreColor, color: scoreText }}
+                    >
+                      {item.tone === 'red' && <AlertTriangle className="w-3 h-3" />}
+                      Score: {item.score}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* 3. CI Operational Health Widget (Col-span-4) */}
+        <div
+          className="col-span-12 lg:col-span-4 rounded-2xl border p-6 shadow-sm flex flex-col"
+          style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
+        >
+          <div className="flex items-center justify-between mb-4 pb-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
+            <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+              <Activity className="w-4 h-4" style={{ color: 'var(--color-success)' }} />
+              CI Operational Health
+            </h2>
+            <button
+              onClick={() => navigate('/ci-health')}
+              className="text-xs font-semibold flex items-center gap-0.5 hover:underline"
+              style={{ color: 'var(--color-brand)' }}
+            >
+              Details
+              <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+
+          <div className="flex-1 space-y-4">
+            {ciLoading ? (
+              <div className="flex items-center justify-center py-12" style={{ color: 'var(--color-text-tertiary)' }}>
+                <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                Loading pipelines...
+              </div>
+            ) : ciList.length === 0 ? (
+              <div className="text-center py-12 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                No active monitored pipelines. Add repos in Settings.
+              </div>
+            ) : (
+              ciList.map((entry) => {
+                const isSuccess = entry.lastRunStatus === 'success' || entry.successRate >= 80;
+                const dotColor = isSuccess ? 'var(--color-success)' : 'var(--color-error)';
+                const pulseClass = isSuccess ? 'pulse-success-dot' : 'pulse-error-dot';
+                
+                return (
+                  <div key={entry.repo} className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {/* Custom Pulsing StatusDot */}
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${pulseClass}`} style={{ background: dotColor }} />
+                        <span className="text-sm font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
+                          {entry.repo.split('/').pop()}
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold font-display" style={{ color: 'var(--color-text-primary)' }}>
+                        {entry.successRate}%
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--color-surface-tertiary)' }}>
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${entry.successRate}%`,
+                            background: isSuccess ? 'var(--color-success)' : 'var(--color-error)',
+                          }}
+                        />
+                      </div>
+                      <span className="text-[10px] shrink-0 w-8 text-right" style={{ color: 'var(--color-text-tertiary)' }}>
+                        {entry.avgDuration}m avg
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* 4. DORA Metrics Insights Widget (Full Width) */}
+        <div
+          className="col-span-12 rounded-2xl border p-6 shadow-sm"
+          style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
+        >
+          <div className="flex items-center justify-between mb-4 pb-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
+            <div className="flex items-center gap-4">
+              <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+                <TrendingUp className="w-4 h-4" style={{ color: 'var(--color-brand-end)' }} />
+                DORA Insights Dashboard
+              </h2>
+              {/* Repository Selector Dropdown */}
+              {repos.length > 1 && (
+                <select
+                  value={activeDoraRepo}
+                  onChange={(e) => setSelectedDoraRepo(e.target.value)}
+                  className="text-xs font-medium bg-transparent border rounded px-2.5 py-1 outline-none transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+                >
+                  {repos.map((r: any) => (
+                    <option key={r.id} value={r.full_name}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <button
+              onClick={() => navigate('/insights')}
+              className="text-xs font-semibold flex items-center gap-0.5 hover:underline"
+              style={{ color: 'var(--color-brand)' }}
+            >
+              View Analytics
+              <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+
+          {doraLoading ? (
+            <div className="flex items-center justify-center py-8" style={{ color: 'var(--color-text-tertiary)' }}>
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              Loading metrics for {activeDoraRepo.split('/').pop()}...
+            </div>
+          ) : !doraMetrics ? (
+            <div className="text-center py-8 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+              Select a repository to display DORA metrics.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 rounded-xl border text-center" style={{ background: 'var(--color-surface-secondary)', borderColor: 'var(--color-border)' }}>
+                <div className="text-[10px] font-semibold text-transform uppercase tracking-wider" style={{ color: 'var(--color-text-tertiary)' }}>
+                  Deployment Frequency
+                </div>
+                <div className="text-xl font-bold font-display mt-1" style={{ color: 'var(--color-brand-start)' }}>
+                  {doraMetrics.current.deploymentFrequency.value !== null ? `${doraMetrics.current.deploymentFrequency.value}/day` : 'N/A'}
+                </div>
+                <div className="text-[10px] font-semibold mt-1" style={{ color: 'var(--color-success)' }}>
+                  {doraMetrics.current.deploymentFrequency.label}
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border text-center" style={{ background: 'var(--color-surface-secondary)', borderColor: 'var(--color-border)' }}>
+                <div className="text-[10px] font-semibold text-transform uppercase tracking-wider" style={{ color: 'var(--color-text-tertiary)' }}>
+                  Lead Time to Change
+                </div>
+                <div className="text-xl font-bold font-display mt-1" style={{ color: 'var(--color-brand-mid)' }}>
+                  {doraMetrics.current.prCycleTime.value !== null ? `${doraMetrics.current.prCycleTime.value} days` : 'N/A'}
+                </div>
+                <div className="text-[10px] font-semibold mt-1" style={{ color: 'var(--color-success)' }}>
+                  {doraMetrics.current.prCycleTime.label}
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border text-center" style={{ background: 'var(--color-surface-secondary)', borderColor: 'var(--color-border)' }}>
+                <div className="text-[10px] font-semibold text-transform uppercase tracking-wider" style={{ color: 'var(--color-text-tertiary)' }}>
+                  Mean Time to Recover
+                </div>
+                <div className="text-xl font-bold font-display mt-1" style={{ color: 'var(--color-brand-end)' }}>
+                  {doraMetrics.current.meanTimeToRecovery.value !== null ? `${doraMetrics.current.meanTimeToRecovery.value} hours` : 'N/A'}
+                </div>
+                <div className="text-[10px] font-semibold mt-1" style={{ color: 'var(--color-success)' }}>
+                  {doraMetrics.current.meanTimeToRecovery.label}
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border text-center" style={{ background: 'var(--color-surface-secondary)', borderColor: 'var(--color-border)' }}>
+                <div className="text-[10px] font-semibold text-transform uppercase tracking-wider" style={{ color: 'var(--color-text-tertiary)' }}>
+                  Change Failure Rate
+                </div>
+                <div className="text-xl font-bold font-display mt-1" style={{ color: 'var(--color-error)' }}>
+                  {doraMetrics.current.changeFailureRate.value !== null ? `${doraMetrics.current.changeFailureRate.value}%` : 'N/A'}
+                </div>
+                <div className="text-[10px] font-semibold mt-1" style={{ color: 'var(--color-success)' }}>
+                  {doraMetrics.current.changeFailureRate.label}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
-
-      <ActivityFeed />
     </div>
   );
 }
