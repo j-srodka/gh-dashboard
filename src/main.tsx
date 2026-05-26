@@ -7,13 +7,6 @@ import App from './App';
 import './index.css';
 
 // Register service worker for desktop notification click handling.
-// Placed BEFORE render so it starts loading early.
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/service-worker.js').catch(() => {
-    // Service worker registration may fail in dev or if the file is missing.
-    // This is non-critical — desktop notifications still work for in-app clicks.
-  });
-}
 
 const queryClient = new QueryClient({
   defaultOptions: {

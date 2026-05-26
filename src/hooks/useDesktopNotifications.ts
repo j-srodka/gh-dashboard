@@ -78,18 +78,24 @@ export function useDesktopNotifications() {
       }
 
       try {
-        new Notification(title, {
+        const notif = new Notification(title, {
           body,
           icon: '/vite.svg',
           tag: n.id,
-          data: {
-            url: n.subject?.url || null,
-            repoName: repo,
-            notifType: classification,
-          },
         });
+        notif.onclick = () => {
+          if (n.subject?.url) {
+            let url = n.subject.url
+              .replace('api.github.com/repos', 'github.com')
+              .replace('/pulls/', '/pull/');
+            if (url.startsWith('https://github.com')) {
+              window.open(url, '_blank');
+            }
+          }
+          notif.close();
+        };
       } catch {
-        // Silently ignore — permission may have been revoked between checks
+        // Notification permission may have been revoked
       }
     }
 

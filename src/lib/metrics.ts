@@ -1,11 +1,4 @@
-import { getGitHubToken } from './auth.js';
-
-const BASE = 'https://api.github.com';
-const HEADERS = {
-  Accept: 'application/vnd.github+json',
-  'X-GitHub-Api-Version': '2022-11-28',
-  'User-Agent': 'gh-dashboard/0.1.0',
-};
+import { githubGet } from './api';
 
 export interface MetricValue {
   value: number | null;
@@ -51,23 +44,7 @@ function isoDate(d: Date): string {
   return d.toISOString().split('T')[0];
 }
 
-async function githubFetch(token: string, path: string): Promise<any> {
-  const url = `${BASE}/${path}`;
-  const response = await fetch(url, {
-    headers: {
-      ...HEADERS,
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`GitHub API ${response.status} for ${path}`);
-  }
-  return response.json();
-}
-
-// ── PR Cycle Time ────────────────────────────────────────────────────────
 async function computePRCycleTime(
-  token: string,
   owner: string,
   repo: string,
   since: Date,
@@ -77,14 +54,10 @@ async function computePRCycleTime(
     const sinceStr = isoDate(since);
     let q = `is:pr+is:merged+repo:${owner}/${repo}+merged:>=${sinceStr}`;
     if (until) {
-      const untilStr = isoDate(until);
-      q += `+merged:<${untilStr}`;
+      q += `+merged:<${isoDate(until)}`;
     }
-    // Use search API for merged PRs within date range
-    const data = await githubFetch(
-      token,
-      `search/issues?q=${encodeURIComponent(q)}&sort=created&order=desc&per_page=100`,
-    );
+
+    const data = await githubGet<any>(`search/issues?q=${encodeURIComponent(q)}&sort=created&order=desc&per_page=100`);
 
     const items = (data.items || []) as any[];
     const mergedPRs = items.filter((pr: any) => pr.pull_request && pr.closed_at);
@@ -107,9 +80,7 @@ async function computePRCycleTime(
   }
 }
 
-// ── Review Turnaround ────────────────────────────────────────────────────
 async function computeReviewTurnaround(
-  token: string,
   owner: string,
   repo: string,
   since: Date,
@@ -119,13 +90,9 @@ async function computeReviewTurnaround(
     const sinceStr = isoDate(since);
     let q = `is:pr+is:merged+repo:${owner}/${repo}+merged:>=${sinceStr}`;
     if (until) {
-      const untilStr = isoDate(until);
-      q += `+merged:<${untilStr}`;
+      q += `+merged:<${isoDate(until)}`;
     }
-    const data = await githubFetch(
-      token,
-      `search/issues?q=${encodeURIComponent(q)}&sort=created&order=desc&per_page=30`,
-    );
+    const data = await githubGet<any>(`search/issues?q=${encodeURIComponent(q)}&sort=created&order=desc&per_page=30`);
 
     const items = (data.items || []) as any[];
     const mergedPRs = items.filter((pr: any) => pr.pull_request);
@@ -134,21 +101,16 @@ async function computeReviewTurnaround(
       return { value: null, label: 'No merged PRs in period' };
     }
 
-    // Fetch reviews for up to 20 most recent PRs
     const prsToCheck = mergedPRs.slice(0, 20);
     const turnaroundHours: number[] = [];
 
     for (const pr of prsToCheck) {
       try {
-        const reviews = await githubFetch(
-          token,
-          `repos/${owner}/${repo}/pulls/${pr.number}/reviews?per_page=50`,
-        );
+        const reviews = await githubGet<any[]>(`repos/${owner}/${repo}/pulls/${pr.number}/reviews?per_page=50`);
         const approvedReviews = (reviews || []).filter(
           (r: any) => r.state === 'APPROVED',
         );
         if (approvedReviews.length > 0) {
-          // First approved review timestamp
           const firstApproval = approvedReviews.sort(
             (a: any, b: any) =>
               new Date(a.submitted_at).getTime() -
@@ -158,7 +120,7 @@ async function computeReviewTurnaround(
           turnaroundHours.push(hours);
         }
       } catch {
-        // Skip PRs where we can't fetch reviews
+        // skip PRs with review fetch errors
       }
     }
 
@@ -178,9 +140,7 @@ async function computeReviewTurnaround(
   }
 }
 
-// ── Deployment Frequency ─────────────────────────────────────────────────
 async function computeDeploymentFrequency(
-  token: string,
   owner: string,
   repo: string,
   periodDays: number,
@@ -188,10 +148,7 @@ async function computeDeploymentFrequency(
   until?: Date,
 ): Promise<MetricValue> {
   try {
-    const data = await githubFetch(
-      token,
-      `repos/${owner}/${repo}/releases?per_page=100`,
-    ).catch(() => []);
+    const data = await githubGet<any[]>(`repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/releases?per_page=100`).catch(() => []);
     const releases = (Array.isArray(data) ? data : []) as any[];
     const recentReleases = releases.filter((r: any) => {
       const published = new Date(r.published_at || r.created_at);
@@ -202,7 +159,6 @@ async function computeDeploymentFrequency(
     });
 
     if (recentReleases.length > 0) {
-      // Deployments per day based on releases
       const freq = recentReleases.length / periodDays;
       return {
         value: Math.round(freq * 100) / 100,
@@ -210,13 +166,12 @@ async function computeDeploymentFrequency(
       };
     }
 
-    // Fallback: Default branch commits (merge/push events proxy)
     const sinceStr = isoDate(since);
-    let commitsPath = `repos/${owner}/${repo}/commits?since=${sinceStr}&per_page=100`;
+    let commitsPath = `repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits?since=${sinceStr}&per_page=100`;
     if (until) {
       commitsPath += `&until=${isoDate(until)}`;
     }
-    const commitsData = await githubFetch(token, commitsPath).catch(() => []);
+    const commitsData = await githubGet<any[]>(commitsPath).catch(() => []);
     const commits = Array.isArray(commitsData) ? commitsData : [];
 
     if (commits.length > 0) {
@@ -233,22 +188,16 @@ async function computeDeploymentFrequency(
   }
 }
 
-// ── MTTR & Change Failure Rate (from workflow runs) ─────────────────────
 async function computeWorkflowMetrics(
-  token: string,
   owner: string,
   repo: string,
   since: Date,
   until?: Date,
 ): Promise<{ mttr: MetricValue; cfr: MetricValue; pipelineDuration: MetricValue }> {
   try {
-    const data = await githubFetch(
-      token,
-      `repos/${owner}/${repo}/actions/runs?per_page=100`,
-    ).catch(() => ({ workflow_runs: [] }));
+    const data = await githubGet<any>(`repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/actions/runs?per_page=100`).catch(() => ({ workflow_runs: [] }));
     const runs = (data.workflow_runs || []) as any[];
 
-    // Filter to runs within period
     const periodRuns = runs.filter((r: any) => {
       const created = new Date(r.created_at);
       if (until) {
@@ -267,12 +216,11 @@ async function computeWorkflowMetrics(
 
     const completed = periodRuns.filter((r: any) => r.conclusion);
 
-    // ── Pipeline Duration ──
     const durations = completed
       .filter((r: any) => r.created_at && r.updated_at)
       .map((r: any) => {
         const ms = new Date(r.updated_at).getTime() - new Date(r.created_at).getTime();
-        return Math.max(1, Math.round(ms / 60000)); // in minutes
+        return Math.max(1, Math.round(ms / 60000));
       });
     const avgDuration = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length * 10) / 10 : null;
     const pipelineDuration: MetricValue = {
@@ -280,10 +228,7 @@ async function computeWorkflowMetrics(
       label: avgDuration !== null ? `${completed.length} run${completed.length === 1 ? '' : 's'} averaged` : 'No completed run timings',
     };
 
-    // ── Change Failure Rate ──
-    const failures = completed.filter(
-      (r: any) => r.conclusion === 'failure',
-    );
+    const failures = completed.filter((r: any) => r.conclusion === 'failure');
     const cfrValue =
       completed.length > 0
         ? Math.round((failures.length / completed.length) * 1000) / 10
@@ -294,8 +239,6 @@ async function computeWorkflowMetrics(
       label: `${failures.length} failure${failures.length === 1 ? '' : 's'} / ${completed.length} run${completed.length === 1 ? '' : 's'}`,
     };
 
-    // ── MTTR ──
-    // For each workflow name, find failure→next-success pairs
     const runsByWorkflow = new Map<string, any[]>();
     for (const run of periodRuns) {
       const name = run.name || run.workflow_id?.toString() || 'unknown';
@@ -307,24 +250,13 @@ async function computeWorkflowMetrics(
     const recoveryHours: number[] = [];
 
     for (const [, wfRuns] of runsByWorkflow) {
-      // Sort by created_at ascending
-      wfRuns.sort(
-        (a, b) =>
-          new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-      );
+      wfRuns.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
       for (let i = 0; i < wfRuns.length - 1; i++) {
         const current = wfRuns[i];
         const next = wfRuns[i + 1];
-        if (
-          current.conclusion === 'failure' &&
-          next.conclusion === 'success'
-        ) {
-          const hours = hoursBetween(
-            current.updated_at || current.created_at,
-            next.created_at,
-          );
-          // Only count reasonable recovery times (< 720 hours / 30 days)
+        if (current.conclusion === 'failure' && next.conclusion === 'success') {
+          const hours = hoursBetween(current.updated_at || current.created_at, next.created_at);
           if (hours > 0 && hours < 720) {
             recoveryHours.push(hours);
           }
@@ -355,9 +287,7 @@ async function computeWorkflowMetrics(
   }
 }
 
-// ── Issue Resolution MTTR ───────────────────────────────────────────────
 async function computeIssueResolutionTime(
-  token: string,
   owner: string,
   repo: string,
   since: Date,
@@ -367,13 +297,9 @@ async function computeIssueResolutionTime(
     const sinceStr = isoDate(since);
     let q = `is:issue+is:closed+repo:${owner}/${repo}+closed:>=${sinceStr}`;
     if (until) {
-      const untilStr = isoDate(until);
-      q += `+closed:<${untilStr}`;
+      q += `+closed:<${isoDate(until)}`;
     }
-    const data = await githubFetch(
-      token,
-      `search/issues?q=${encodeURIComponent(q)}&sort=created&order=desc&per_page=100`,
-    ).catch(() => ({ items: [] }));
+    const data = await githubGet<any>(`search/issues?q=${encodeURIComponent(q)}&sort=created&order=desc&per_page=100`).catch(() => ({ items: [] }));
 
     const items = (data.items || []) as any[];
     const closedIssues = items.filter((item: any) => !item.pull_request && item.closed_at);
@@ -396,49 +322,35 @@ async function computeIssueResolutionTime(
   }
 }
 
-// ── Main compute function ────────────────────────────────────────────────
 export async function computeMetrics(
   owner: string,
   repo: string,
   periodDays: number,
 ): Promise<MetricsResult> {
-  const token = getGitHubToken();
   const repoFull = `${owner}/${repo}`;
-
   const currentSince = daysAgo(periodDays);
   const previousSince = daysAgo(periodDays * 2);
   const previousUntil = daysAgo(periodDays);
-
   const insufficientData: string[] = [];
 
-  // Compute current period metrics
   const [prCycleCurrent, reviewCurrent, deployCurrent, wfMetricsCurrent, issueResolutionCurrent] =
     await Promise.all([
-      computePRCycleTime(token, owner, repo, currentSince),
-      computeReviewTurnaround(token, owner, repo, currentSince),
-      computeDeploymentFrequency(token, owner, repo, periodDays, currentSince),
-      computeWorkflowMetrics(token, owner, repo, currentSince),
-      computeIssueResolutionTime(token, owner, repo, currentSince),
+      computePRCycleTime(owner, repo, currentSince),
+      computeReviewTurnaround(owner, repo, currentSince),
+      computeDeploymentFrequency(owner, repo, periodDays, currentSince),
+      computeWorkflowMetrics(owner, repo, currentSince),
+      computeIssueResolutionTime(owner, repo, currentSince),
     ]);
 
-  // Compute previous period metrics
   const [prCyclePrev, reviewPrev, deployPrev, wfMetricsPrev, issueResolutionPrev] =
     await Promise.all([
-      computePRCycleTime(token, owner, repo, previousSince, previousUntil),
-      computeReviewTurnaround(token, owner, repo, previousSince, previousUntil),
-      computeDeploymentFrequency(
-        token,
-        owner,
-        repo,
-        periodDays,
-        previousSince,
-        previousUntil,
-      ),
-      computeWorkflowMetrics(token, owner, repo, previousSince, previousUntil),
-      computeIssueResolutionTime(token, owner, repo, previousSince, previousUntil),
+      computePRCycleTime(owner, repo, previousSince, previousUntil),
+      computeReviewTurnaround(owner, repo, previousSince, previousUntil),
+      computeDeploymentFrequency(owner, repo, periodDays, previousSince, previousUntil),
+      computeWorkflowMetrics(owner, repo, previousSince, previousUntil),
+      computeIssueResolutionTime(owner, repo, previousSince, previousUntil),
     ]);
 
-  // Build metric period objects
   const current: MetricPeriod = {
     prCycleTime: prCycleCurrent,
     reviewTurnaround: reviewCurrent,
@@ -459,7 +371,6 @@ export async function computeMetrics(
     issueResolutionTime: issueResolutionPrev,
   };
 
-  // Collect insufficient data messages
   const metricNames: Array<keyof MetricPeriod> = [
     'prCycleTime',
     'reviewTurnaround',
@@ -472,9 +383,7 @@ export async function computeMetrics(
 
   for (const name of metricNames) {
     if (current[name].value === null) {
-      insufficientData.push(
-        `${name}: ${current[name].label}`,
-      );
+      insufficientData.push(`${name}: ${current[name].label}`);
     }
   }
 

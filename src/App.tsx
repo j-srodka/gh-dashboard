@@ -4,6 +4,7 @@ import { Layout } from './components/layout/Layout';
 import { DesktopNotifications } from './components/layout/DesktopNotifications';
 import { useRepos, useRecordSnapshots } from './hooks/useGitHubQuery';
 import { useMonitoredRepos } from './hooks/useMonitoredRepos';
+import { hasToken } from './lib/auth';
 
 const OverviewPage = lazy(() =>
   import('./pages/OverviewPage').then((m) => ({ default: m.OverviewPage })),
@@ -43,7 +44,7 @@ const CIHealthPage = lazy(() =>
   import('./pages/CIHealthPage').then((m) => ({ default: m.CIHealthPage })),
 );
 
-function App() {
+function AuthenticatedApp() {
   const { data: repoData } = useRepos();
   const { monitoredRepos, setAll } = useMonitoredRepos();
   const recordSnapshots = useRecordSnapshots();
@@ -90,6 +91,23 @@ function App() {
       </Suspense>
     </Layout>
   );
+}
+
+function UnauthenticatedApp() {
+  return (
+    <Layout>
+      <Suspense fallback={<div />}>
+        <Routes>
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="/settings" replace />} />
+        </Routes>
+      </Suspense>
+    </Layout>
+  );
+}
+
+function App() {
+  return hasToken() ? <AuthenticatedApp /> : <UnauthenticatedApp />;
 }
 
 export default App;

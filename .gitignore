@@ -94,3 +94,23 @@ tools/audit-output/
 # Generated config
 AGENTS-context-mode.md
 GEMINI.md
+# CodeGraph index (local dev)
+.codegraph/
+
+# Agent tooling configs (local dev)
+.mcp.json
+.opencode/
+
+# Local dev artifacts
+chain-runs/
+data/
+progress.md
+research.md
+handoff-beads-todo.md
+AGENTS-magic-context.md.bak
+codegraph-pi-integration-plan.md
+.rtk/
+plugins/
+
+# Pi extension (separate concern)
+src/pi-beads-overlay.ts
