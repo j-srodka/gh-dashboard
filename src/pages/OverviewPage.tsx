@@ -14,6 +14,7 @@ import {
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useMonitoredRepos } from '@/hooks/useMonitoredRepos';
 import { useAIAsk } from '@/hooks/useAIAsk';
+import { getOpenRouterKey } from '@/lib/auth';
 
 import {
   Activity,
@@ -41,18 +42,37 @@ function useAIStandupQuery(prompt: string, enabled: boolean) {
   return useQuery({
     queryKey: ['ai-standup', prompt],
     queryFn: async (): Promise<AskResult> => {
-      const res = await fetch('/api/ai/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
-      });
-      if (!res.ok) {
-        throw new Error('AI Ask API call failed');
+      const apiKey = getOpenRouterKey();
+      if (!apiKey) {
+        return { response: '', error: 'No OpenRouter API key configured. Add one in Settings.', agentUsed: 'openrouter' };
       }
-      return res.json();
+      try {
+        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': window.location.origin,
+            'X-Title': 'gh-dashboard',
+          },
+          body: JSON.stringify({
+            model: 'anthropic/claude-sonnet-4',
+            messages: [{ role: 'user', content: prompt }],
+          }),
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`OpenRouter ${res.status}: ${text.slice(0, 200)}`);
+        }
+        const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
+        const content = data.choices?.[0]?.message?.content || '';
+        return { response: content, agentUsed: 'openrouter' };
+      } catch (err: any) {
+        return { response: '', error: err.message, agentUsed: 'openrouter' };
+      }
     },
     enabled: enabled && prompt.length > 0,
-    staleTime: 5 * 60 * 1000, // Cache standup digests for 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 }
 
