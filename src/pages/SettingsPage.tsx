@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useUser } from '@/hooks/useGitHubQuery';
 import { useAccount } from '@/contexts/AccountContext';
+import { setToken, clearToken } from '@/lib/auth';
 import { Users, Bell, BellOff, AlertCircle, LogOut } from 'lucide-react';
 
 function getNotificationPermission(): NotificationPermission | 'unsupported' {
@@ -40,10 +41,14 @@ export function SettingsPage() {
   const [notifyReviewRequests, setNotifyReviewRequests] = useLocalStorage<boolean>('notifyReviewRequests', true);
   const [notifyMentions, setNotifyMentions] = useLocalStorage<boolean>('notifyMentions', true);
   const [aiAgent, setAiAgent] = useLocalStorage<string>('aiAgent', 'auto');
-  const { accounts, activeAccount, setActiveAccount } = useAccount();
+  const { accounts, activeAccount, setActiveAccount, isAuthenticated } = useAccount();
   const [toast, setToast] = useState<string | null>(null);
+  const [tokenInput, setTokenInput] = useState('');
+  const [showToken, setShowToken] = useState(false);
 
-  // Permission state for desktop notifications
+  const hasStoredToken = typeof window !== 'undefined' && !!localStorage.getItem('gh_token');
+  const hasEnvToken = !!(import.meta.env.VITE_GH_TOKEN);
+
   const [permState, setPermState] = useState<NotificationPermission | 'unsupported'>(getNotificationPermission);
 
   const requestPermission = useCallback(async () => {
@@ -56,7 +61,7 @@ export function SettingsPage() {
 
   const userName = userData?.name || userData?.login || 'User';
   const userEmail = userData?.email || '';
-  const userAvatar = userData?.avatar_url;
+  const userAvatar = userData?.avatar_url || '';
   const userInitials = userName
     .split(' ')
     .map((w: string) => w[0])
@@ -65,11 +70,21 @@ export function SettingsPage() {
     .slice(0, 2);
 
   const handleDisconnect = () => {
+    clearToken();
     localStorage.clear();
-    setToast("Logged out of the portal. Run 'gh auth logout' in your terminal to completely disconnect GitHub CLI.");
+    setToast("Logged out. Refresh the page to re-authenticate.");
     setTimeout(() => {
       window.location.reload();
     }, 3000);
+  };
+
+  const handleSaveToken = () => {
+    if (tokenInput.trim()) {
+      setToken(tokenInput.trim());
+      setTokenInput('');
+      setToast("GitHub token saved. Refreshing...");
+      setTimeout(() => window.location.reload(), 1500);
+    }
   };
 
   return (
@@ -83,6 +98,80 @@ export function SettingsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Settings</h1>
         <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>Configure your portal preferences</p>
+      </div>
+
+      <div className="rounded-xl border p-6 mb-4" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+        <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>GitHub Authentication</h2>
+        {isAuthenticated ? (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="inline-block w-2 h-2 rounded-full" style={{ background: '#22c55e' }} />
+              <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>Connected</span>
+              {hasEnvToken && <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--color-info-light)', color: 'var(--color-brand)' }}>via gh auth</span>}
+              {!hasEnvToken && hasStoredToken && <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'var(--color-info-light)', color: 'var(--color-brand)' }}>via PAT</span>}
+            </div>
+            {activeAccount && (
+              <div className="flex items-center gap-3 mb-4">
+                {activeAccount.avatarUrl ? (
+                  <img src={activeAccount.avatarUrl} alt={activeAccount.label} className="w-8 h-8 rounded-full" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: 'var(--color-brand)' }}>
+                    {activeAccount.label?.[0]?.toUpperCase() || '?'}
+                  </div>
+                )}
+                <div>
+                  <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>{activeAccount.label}</div>
+                  <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>{activeAccount.host}</div>
+                </div>
+              </div>
+            )}
+            {!hasEnvToken && (
+              <div className="mt-3">
+                <button
+                  onClick={handleDisconnect}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 cursor-pointer"
+                  style={{ background: 'var(--color-error)' }}
+                >
+                  <LogOut className="w-4 h-4" /> Disconnect
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div>
+            <p className="text-sm mb-3" style={{ color: 'var(--color-text-secondary)' }}>
+              Enter a GitHub Personal Access Token to connect. Tokens are stored locally in your browser.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type={showToken ? 'text' : 'password'}
+                value={tokenInput}
+                onChange={(e) => setTokenInput(e.target.value)}
+                placeholder="ghp_xxxxxxxxxxxx"
+                className="flex-1 px-3 py-2 rounded-lg text-sm"
+                style={{ background: 'var(--color-surface-secondary)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border)' }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSaveToken(); }}
+              />
+              <button
+                onClick={() => setShowToken(!showToken)}
+                className="px-3 py-2 rounded-lg text-xs cursor-pointer"
+                style={{ background: 'var(--color-surface-secondary)', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)' }}
+              >
+                {showToken ? 'Hide' : 'Show'}
+              </button>
+              <button
+                onClick={handleSaveToken}
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-white cursor-pointer"
+                style={{ background: 'var(--color-brand)' }}
+              >
+                Save
+              </button>
+            </div>
+            <p className="text-xs mt-2" style={{ color: 'var(--color-text-tertiary)' }}>
+              Tip: Run <code className="px-1 py-0.5 rounded text-xs" style={{ background: 'var(--color-surface-secondary)' }}>gh auth login</code> first, then use <code className="px-1 py-0.5 rounded text-xs" style={{ background: 'var(--color-surface-secondary)' }}>npm run dev:token</code> for automatic authentication.
+            </p>
+          </div>
+        )}
       </div>
 
       {accounts.length > 1 && (
@@ -162,46 +251,25 @@ export function SettingsPage() {
 
         {permState === 'unsupported' ? (
           <div className="flex items-start gap-3 p-3 rounded-lg mb-4" style={{ background: 'var(--color-warning-light, #fef3c7)', border: '1px solid var(--color-warning, #f59e0b)' }}>
-            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--color-warning, #f59e0b)' }} />
-            <div>
-              <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>Browser Notifications Not Supported</div>
-              <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>
-                Your browser does not support desktop notifications. Inline alerts will still function.
-              </div>
-            </div>
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--color-warning, #f59e0b)' }} />
+            <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Desktop notifications are not supported in this browser.</div>
           </div>
-        ) : permState === 'denied' ? (
-          <div className="flex items-start gap-3 p-3 rounded-lg mb-4" style={{ background: 'var(--color-warning-light, #fef3c7)', border: '1px solid var(--color-warning, #f59e0b)' }}>
-            <BellOff className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--color-warning, #f59e0b)' }} />
-            <div>
-              <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>Desktop Notifications Blocked</div>
-              <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>
-                You have blocked notifications for this site. To re-enable, update your browser settings for localhost:5173.
-              </div>
-            </div>
-          </div>
-        ) : permState === 'default' ? (
-          <div className="mb-4 p-4 rounded-xl border" style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface-secondary)' }}>
-            <p className="text-xs mb-3" style={{ color: 'var(--color-text-tertiary)' }}>
-              Enable desktop notifications to receive real-time alerts for CI failures, review requests, and mentions.
-            </p>
-            <button
-              onClick={requestPermission}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all hover:opacity-90 cursor-pointer"
-              style={{ background: 'var(--color-brand)', color: '#fff' }}
-            >
-              <Bell className="w-4 h-4" />
-              Enable Notifications
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-start gap-3 p-3 rounded-lg mb-4" style={{ background: 'var(--color-success-light, #dcfce7)', border: '1px solid var(--color-success, #22c55e)' }}>
-            <Bell className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--color-success, #22c55e)' }} />
+        ) : permState === 'granted' ? (
+          <div className="flex items-center gap-3 p-3 rounded-lg mb-4" style={{ background: 'var(--color-success-light, #dcfce7)', border: '1px solid var(--color-success, #22c55e)' }}>
+            <Bell className="w-4 h-4 shrink-0" style={{ color: 'var(--color-success, #22c55e)' }} />
             <div>
               <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>Desktop Notifications Enabled</div>
               <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>
                 You'll receive desktop browser alerts for the event types toggled below.
               </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 p-3 rounded-lg mb-4 cursor-pointer" onClick={requestPermission} style={{ background: 'var(--color-surface-secondary)', border: '1px solid var(--color-border)' }}>
+            <BellOff className="w-4 h-4 shrink-0" style={{ color: 'var(--color-text-tertiary)' }} />
+            <div>
+              <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>Enable Desktop Notifications</div>
+              <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>Click to grant notification permission</div>
             </div>
           </div>
         )}
@@ -228,30 +296,6 @@ export function SettingsPage() {
             </div>
             <Toggle checked={notifyMentions} onChange={() => setNotifyMentions(!notifyMentions)} ariaLabel="Toggle mention notifications" />
           </div>
-        </div>
-      </div>
-
-      <div className="rounded-xl border p-6" style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-        <h2 className="text-base font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>Account & Disconnect</h2>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4 py-1">
-            {userAvatar ? (
-              <img src={userAvatar} alt={userName} className="w-12 h-12 rounded-full object-cover border" style={{ borderColor: 'var(--color-border)' }} />
-            ) : (
-              <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold text-white" style={{ background: 'linear-gradient(135deg, var(--color-brand), #7c3aed)' }}>{userInitials}</div>
-            )}
-            <div>
-              <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>{userName}</div>
-              <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>{userEmail || userData?.html_url || ''}</div>
-            </div>
-          </div>
-          <button
-            onClick={handleDisconnect}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 cursor-pointer"
-            style={{ background: 'var(--color-error)' }}
-          >
-            <LogOut className="w-4 h-4" /> Disconnect Account
-          </button>
         </div>
       </div>
     </div>

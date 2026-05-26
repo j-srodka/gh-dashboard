@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { setActiveAccount } from '@/lib/api';
+import { getToken, hasToken } from '@/lib/auth';
 
 export interface Account {
   id: string;
@@ -15,59 +15,64 @@ interface AccountContextValue {
   setActiveAccount: (id: string) => void;
   refresh: () => Promise<void>;
   loading: boolean;
+  isAuthenticated: boolean;
 }
 
 const AccountContext = createContext<AccountContextValue | null>(null);
 
-const STORAGE_KEY = 'activeAccount';
-
 export function AccountProvider({ children }: { children: ReactNode }) {
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [activeId, setActiveIdState] = useState<string>(() => {
-    try {
-      return localStorage.getItem(STORAGE_KEY) || 'github.com';
-    } catch {
-      return 'github.com';
-    }
-  });
   const [loading, setLoading] = useState(true);
 
-  const fetchAccounts = useCallback(async () => {
+  const fetchAccount = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      setAccounts([]);
+      setLoading(false);
+      return;
+    }
+
     try {
-      const res = await fetch('/api/accounts');
-      if (!res.ok) throw new Error('Failed to fetch accounts');
-      const data = await res.json();
-      setAccounts(data.accounts || []);
+      const res = await fetch('https://api.github.com/user', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      });
+      if (!res.ok) {
+        setAccounts([]);
+        setLoading(false);
+        return;
+      }
+      const user = await res.json() as { login?: string; avatar_url?: string; name?: string };
+      const account: Account = {
+        id: 'github.com',
+        label: user.login || user.name || 'GitHub',
+        host: 'github.com',
+        login: user.login,
+        avatarUrl: user.avatar_url,
+      };
+      setAccounts([account]);
     } catch {
-      // Fallback: assume github.com
-      setAccounts([{ id: 'github.com', label: 'Default', host: 'github.com' }]);
+      setAccounts([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchAccounts();
-  }, [fetchAccounts]);
+    fetchAccount();
+  }, [fetchAccount]);
 
-  // Sync active account to API layer on mount and when it changes
-  useEffect(() => {
-    setActiveAccount(activeId || undefined);
-  }, [activeId]);
+  const activeAccount = accounts[0] || null;
 
-  const activeAccount = accounts.find((a) => a.id === activeId) || accounts[0] || null;
-
-  const setActiveAccountCtx = useCallback((id: string) => {
-    setActiveIdState(id);
-    try {
-      localStorage.setItem(STORAGE_KEY, id);
-    } catch {
-      // localStorage may be unavailable
-    }
+  const setActiveAccountCtx = useCallback((_id: string) => {
+    // Single-user app: switching accounts is not supported
   }, []);
 
   return (
-    <AccountContext.Provider value={{ accounts, activeAccount, setActiveAccount: setActiveAccountCtx, refresh: fetchAccounts, loading }}>
+    <AccountContext.Provider value={{ accounts, activeAccount, setActiveAccount: setActiveAccountCtx, refresh: fetchAccount, loading, isAuthenticated: hasToken() }}>
       {children}
     </AccountContext.Provider>
   );
