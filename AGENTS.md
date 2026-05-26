@@ -82,3 +82,112 @@ If search returns 0 results, proceed as a fresh session.
 | `ctx purge` | Call `purge` MCP tool with confirm: true. Warns before wiping knowledge base. |
 
 After /clear or /compact: knowledge base and session stats preserved. Use `ctx purge` to start fresh.
+
+## agentmemory
+
+This project uses **agentmemory** (port 3111) for persistent cross-session memory. It replaces the previous Hindsight setup.
+
+### Start the server
+
+```bash
+./scripts/start-agentmemory.sh    # starts agentmemory (native CLI or Docker fallback)
+```
+
+Or run directly:
+
+```bash
+agentmemory                       # start the memory server
+agentmemory demo                  # seed sample data
+```
+
+### Available via MCP
+
+When agentmemory is running, the following tools are available to agents via MCP:
+
+| Tool | Description |
+|------|-------------|
+| `memory_health` | Check server connectivity |
+| `memory_smart_search` | Hybrid semantic + keyword search across all sessions |
+| `memory_save` | Save a durable fact, decision, or convention |
+| `memory_sessions` | List recent sessions |
+| `memory_profile` | Project intelligence (concepts, files, patterns) |
+
+Full set: 53 tools (requires `AGENTMEMORY_TOOLS=all` in `~/.agentmemory/.env`).
+
+### Viewer
+
+Open http://localhost:3113 to see the real-time memory viewer.
+
+### Configuration
+
+Config file: `~/.agentmemory/.env`
+
+- `EMBEDDING_PROVIDER=local` — free offline embeddings (requires `@xenova/transformers`)
+- `AGENTMEMORY_AUTO_COMPRESS=true` — LLM compresses observations into structured facts
+- `AGENTMEMORY_INJECT_CONTEXT=true` — auto-inject relevant memories into session start
+- `AGENTMEMORY_TOOLS=all` — expose all 53 MCP tools (default: 7 core tools only)
+- `AGENTMEMORY_SECRET=...` — bearer token for protected access
+
+### Per-agent wiring
+
+| Agent | Method |
+|-------|--------|
+| **Claude Code** | `/plugin marketplace add rohitg00/agentmemory` then `/plugin install agentmemory` |
+| **Codex CLI** | `codex plugin marketplace add rohitg00/agentmemory` then `codex plugin add agentmemory@agentmemory` |
+| **pi** | auto-discovers extension at `~/.pi/agent/extensions/agentmemory/` |
+| **Cursor** | MCP server in `~/.cursor/mcp.json` |
+| **Gemini CLI** | `gemini mcp add agentmemory npx -y @agentmemory/mcp --scope user` |
+| **OpenCode** | MCP + plugin in `opencode.json` |
+| **Hermes** | MCP server in `~/.hermes/config.yaml` |
+
+<!-- CODEGRAPH_START -->
+## CodeGraph (via MCP proxy)
+
+This project has a CodeGraph MCP server configured. CodeGraph is a tree-sitter-parsed knowledge graph of every symbol, edge, and file. Reads are sub-millisecond and return structural information grep cannot.
+
+**Pi accesses CodeGraph through the `mcp` proxy tool** — not as direct tools. Use `mcp({ server: "codegraph", tool: "...", args: "..." })` where `args` is a JSON string.
+
+### Discover CodeGraph tools
+
+Before calling a specific tool, list what CodeGraph exposes:
+
+```
+mcp({ server: "codegraph" })
+```
+
+Or search by name/description:
+
+```
+mcp({ search: "codegraph", server: "codegraph" })
+```
+
+### When to prefer CodeGraph over native search
+
+Use CodeGraph for **structural** questions — what calls what, what would break, where is X defined, what is X's signature. Use native grep/read only for **literal text** queries (string contents, comments, log messages) or after you already have a specific file open.
+
+| Question | Proxy call |
+|---|---|
+| "Where is X defined?" / "Find symbol named X" | `mcp({ server: "codegraph", tool: "codegraph_search", args: '{"query": "X"}' })` |
+| "What calls function Y?" | `mcp({ server: "codegraph", tool: "codegraph_callers", args: '{"symbol": "Y"}' })` |
+| "What does Y call?" | `mcp({ server: "codegraph", tool: "codegraph_callees", args: '{"symbol": "Y"}' })` |
+| "How does X reach/become Y?" | `mcp({ server: "codegraph", tool: "codegraph_trace", args: '{"from": "X", "to": "Y"}' })` |
+| "What would break if I changed Z?" | `mcp({ server: "codegraph", tool: "codegraph_impact", args: '{"symbol": "Z"}' })` |
+| "Show me Y's signature / source / docstring" | `mcp({ server: "codegraph", tool: "codegraph_node", args: '{"symbol": "Y", "includeCode": true}' })` |
+| "Give me focused context for a task/area" | `mcp({ server: "codegraph", tool: "codegraph_context", args: '{"task": "...", "maxNodes": 20, "includeCode": true}' })` |
+| "See several related symbols' source at once" | `mcp({ server: "codegraph", tool: "codegraph_explore", args: '{"symbols": ["A","B"], "includeCode": true}' })` |
+| "What files exist under path/" | `mcp({ server: "codegraph", tool: "codegraph_files", args: '{"path": "src/"}' })` |
+| "Is the index healthy?" | `mcp({ server: "codegraph", tool: "codegraph_status" })` |
+
+### Rules of thumb
+
+- **Answer directly — don't delegate exploration.** For "how does X work" / architecture questions, answer with 2-3 proxy calls: `codegraph_context` first, then ONE `codegraph_explore` for the source of the symbols it surfaces. For a specific **flow** ("how does X reach Y") start with `codegraph_trace` from→to — one call returns the whole path with dynamic hops bridged — then ONE `codegraph_explore` for the bodies; don't rebuild the path with `codegraph_search` + `codegraph_callers`. CodeGraph IS the pre-built index, so spawning a separate file-reading sub-task/agent — or running a grep + read loop — repeats work CodeGraph already did and costs more for the same answer.
+- **Trust CodeGraph results.** They come from a full AST parse. Do NOT re-verify them with grep — that's slower, less accurate, and wastes context.
+- **Don't grep first** when looking up a symbol by name. `codegraph_search` is faster and returns kind + location + signature in one call.
+- **Don't chain `codegraph_search` + `codegraph_node`** when you just want context — `codegraph_context` is one call.
+- **Don't loop `codegraph_node` over many symbols** — one `codegraph_explore` call returns several symbols' source grouped in a single capped call, while each separate node/Read call re-reads the whole context and costs far more.
+- **Index lag**: the file watcher debounces ~500ms behind writes; don't re-query immediately after editing a file in the same turn.
+
+### If `.codegraph/` doesn't exist
+
+The MCP server returns "not initialized." Ask the user: *"I notice this project doesn't have CodeGraph initialized. Want me to run `codegraph init -i` to build the index?"*
+<!-- CODEGRAPH_END -->
