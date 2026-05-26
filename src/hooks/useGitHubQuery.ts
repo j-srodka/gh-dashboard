@@ -1,6 +1,8 @@
 import { useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { githubGet, githubGetResponse, githubPost, githubPatch, githubPut, githubDelete, githubGraphQL } from '@/lib/api';
+import { computeMetrics } from '@/lib/metrics';
+import type { MetricsResult } from '@/lib/metrics';
 import type { EngineeringMetrics } from '@/lib/insights';
 
 export function useRepos() {
@@ -145,16 +147,23 @@ export function useBulkWorkflowRuns(monitoredRepos?: string[], status?: string) 
   return useQuery({
     queryKey: ['bulk-workflows', monitoredRepos, status],
     queryFn: async () => {
-      const res = await fetch('/api/workflows', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repos: monitoredRepos?.slice(0, 10), status }),
-      });
-      if (!res.ok) throw new Error(`Workflows API ${res.status}: ${res.statusText}`);
-      return res.json();
+      if (!monitoredRepos || monitoredRepos.length === 0) return [];
+      const results: any[] = [];
+      for (const fullName of monitoredRepos.slice(0, 10)) {
+        const [owner, repo] = fullName.split('/');
+        if (!owner || !repo) continue;
+        try {
+          const data = await githubGet<any>(`repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/actions/runs?per_page=5`);
+          let runs = (data.workflow_runs || []).map((run: any) => ({ ...run, repo: fullName }));
+          if (status) {
+            runs = runs.filter((run: any) => run.conclusion === status || run.status === status);
+          }
+          results.push(...runs);
+        } catch {}
+      }
+      return results;
     },
     enabled: monitoredRepos !== undefined && monitoredRepos.length > 0,
-    select: (data: any) => data,
   });
 }
 
@@ -295,15 +304,20 @@ export function useRepoReleases(owner: string, repo: string) {
 // ── Snapshots / Digests ────────────────────────────────────────────────────
 
 export function useRecordSnapshots() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (repos: { full_name: string; stargazers_count: number; forks_count: number; open_issues_count: number }[]) => {
-      const res = await fetch('/api/snapshots', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repos }),
-      });
-      if (!res.ok) throw new Error(`Snapshots API ${res.status}`);
-      return res.json();
+      const today = new Date().toISOString().split('T')[0];
+      const snapshots = JSON.parse(localStorage.getItem('gh_snapshots') || '{}') as Record<string, { date: string; stars: number; forks: number; openIssues: number }[]>;
+      for (const repo of repos) {
+        const key = repo.full_name;
+        const entries = snapshots[key] || [];
+        entries.push({ date: today, stars: repo.stargazers_count, forks: repo.forks_count, openIssues: repo.open_issues_count });
+        snapshots[key] = entries;
+      }
+      localStorage.setItem('gh_snapshots', JSON.stringify(snapshots));
+      void queryClient.invalidateQueries({ queryKey: ['snapshots'] });
+      return snapshots;
     },
   });
 }
@@ -311,10 +325,9 @@ export function useRecordSnapshots() {
 export function useSnapshots() {
   return useQuery({
     queryKey: ['snapshots'],
-    queryFn: async () => {
-      const res = await fetch('/api/snapshots');
-      if (!res.ok) throw new Error(`Snapshots API ${res.status}`);
-      return res.json() as Promise<Record<string, { date: string; stars: number; forks: number; openIssues: number }[]>>;
+    queryFn: () => {
+      const raw = localStorage.getItem('gh_snapshots');
+      return raw ? JSON.parse(raw) as Record<string, { date: string; stars: number; forks: number; openIssues: number }[]> : {};
     },
   });
 }
@@ -322,15 +335,22 @@ export function useSnapshots() {
 export function useDigest(period: 'daily' | 'weekly') {
   return useQuery({
     queryKey: ['digests', period],
-    queryFn: async () => {
-      const res = await fetch(`/api/digests?period=${period}`);
-      if (!res.ok) throw new Error(`Digest API ${res.status}`);
-      return res.json() as Promise<{
-        period: 'daily' | 'weekly';
-        from: string;
-        to: string;
-        entries: { repo: string; stars: number; forks: number; openIssues: number }[];
-      }>;
+    queryFn: () => {
+      const raw = localStorage.getItem('gh_snapshots');
+      const snapshots = raw ? JSON.parse(raw) as Record<string, { date: string; stars: number; forks: number; openIssues: number }[]> : {};
+      const days = period === 'daily' ? 1 : 7;
+      const since = new Date();
+      since.setDate(since.getDate() - days);
+      const sinceStr = since.toISOString().split('T')[0];
+      const entries: { repo: string; stars: number; forks: number; openIssues: number }[] = [];
+      for (const [repo, data] of Object.entries(snapshots)) {
+        const matching = data.filter((d) => d.date >= sinceStr);
+        if (matching.length > 0) {
+          const latest = matching[matching.length - 1];
+          entries.push({ repo, stars: latest.stars, forks: latest.forks, openIssues: latest.openIssues });
+        }
+      }
+      return { period, from: sinceStr, to: new Date().toISOString().split('T')[0], entries };
     },
   });
 }
@@ -545,18 +565,7 @@ export function useMentions(owner: string, repo: string) {
 export function useEngineeringMetrics(owner: string, repo: string, periodDays: number = 30) {
   return useQuery({
     queryKey: ['metrics', owner, repo, periodDays],
-    queryFn: async () => {
-      const res = await fetch(`/api/metrics/${owner}/${repo}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ periodDays }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(err.error || `Metrics API ${res.status}`);
-      }
-      return res.json() as Promise<EngineeringMetrics>;
-    },
+    queryFn: () => computeMetrics(owner, repo, periodDays),
     enabled: !!owner && !!repo,
   });
 }
