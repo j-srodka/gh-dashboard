@@ -1,27 +1,25 @@
-const BASE = '/api/github';
+import { getToken } from './auth';
 
-// Module-level account ID — set by AccountProvider
-let _activeAccountId: string | undefined;
+const BASE = 'https://api.github.com';
 
-export function setActiveAccount(id: string | undefined) {
-  _activeAccountId = id;
-}
-
-export function getActiveAccount(): string | undefined {
-  return _activeAccountId;
-}
-
-async function githubRequest<T>(method: string, path: string, body?: unknown, accountId?: string): Promise<T> {
-  const url = `${BASE}/${path.replace(/^\/+/, '')}`;
-  const acc = accountId || _activeAccountId;
+function authHeaders(): Record<string, string> {
+  const token = getToken();
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
   };
-  if (acc) {
-    headers['X-Account'] = acc;
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
+  return headers;
+}
+
+async function githubRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const url = `${BASE}/${path.replace(/^\/+/, '')}`;
+  const headers: Record<string, string> = {
+    ...authHeaders(),
+    'Content-Type': 'application/json',
+  };
 
   const response = await fetch(url, {
     method,
@@ -40,16 +38,9 @@ export function githubGet<T>(path: string): Promise<T> {
   return githubRequest<T>('GET', path);
 }
 
-/** Like githubGet but returns the raw Response so callers can inspect headers (e.g. x-poll-interval). */
 export async function githubGetResponse(path: string): Promise<Response> {
   const url = `${BASE}/${path.replace(/^\/+/, '')}`;
-  const headers: Record<string, string> = {
-    Accept: 'application/vnd.github+json',
-    'X-GitHub-Api-Version': '2022-11-28',
-  };
-  if (_activeAccountId) {
-    headers['X-Account'] = _activeAccountId;
-  }
+  const headers = authHeaders();
 
   const response = await fetch(url, { method: 'GET', headers });
 
@@ -76,29 +67,29 @@ export function githubDelete<T>(path: string): Promise<T> {
   return githubRequest<T>('DELETE', path);
 }
 
-// GitHub GraphQL API proxy
 export async function githubGraphQL<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+  const token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  if (_activeAccountId) {
-    headers['X-Account'] = _activeAccountId;
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch('/api/graphql', {
+  const response = await fetch('https://api.github.com/graphql', {
     method: 'POST',
     headers,
     body: JSON.stringify({ query, variables }),
   });
 
   if (!response.ok) {
-    throw new Error(`GraphQL API ${response.status}: ${response.statusText}`);
+    throw new Error(`GitHub GraphQL ${response.status}: ${response.statusText}`);
   }
 
-  const data = await response.json();
-  if (data.errors?.length > 0) {
-    throw new Error(data.errors[0].message);
+  const data = await response.json() as { data?: T; errors?: Array<{ message: string }> };
+  if (data.errors && data.errors.length > 0) {
+    throw new Error(`GraphQL: ${data.errors.map((e) => e.message).join(', ')}`);
   }
-
   return data.data as T;
 }
+
