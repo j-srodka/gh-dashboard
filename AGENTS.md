@@ -6,6 +6,22 @@ context-mode MCP tools available. Rules protect context window from flooding. On
 
 Analyze/count/filter/compare/search/parse/transform data: **write code** via `context-mode_ctx_execute(language, code)`, `console.log()` only the answer. Do NOT read raw data into context. PROGRAM the analysis, not COMPUTE it. Pure JavaScript — Node.js built-ins only (`fs`, `path`, `child_process`). `try/catch`, handle `null`/`undefined`. One script replaces ten tool calls.
 
+## Sandbox Filesystem Isolation — CRITICAL
+
+`ctx_execute` runs in an **isolated sandbox** with NO access to your project files. Do NOT use `fs.readFileSync()`, `fs.existsSync()`, `require('path').resolve()`, or any filesystem calls referencing project paths in `ctx_execute` — they will fail with ENOENT.
+
+**Correct approaches:**
+- **Check if file exists / list files**: Use `bash` (`ls`, `find`) or `grep` directly
+- **Read file for analysis**: Use `ctx_execute_file(path, language, code)` — the file is loaded into `FILE_CONTENT` variable inside the sandbox
+- **Process data you already have**: Pass it as a string in your code, or use `ctx_execute_file`
+
+**Wrong approach (will fail):**
+```javascript
+// ❌ sandbox has no access to project filesystem
+const fs = require('fs');
+const exists = fs.existsSync('src/lib/auth.ts');
+```
+
 ## BLOCKED — do NOT attempt
 
 ### curl / wget — BLOCKED
