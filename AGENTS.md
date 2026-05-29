@@ -8,6 +8,7 @@ Project-specific agent guidance lives in **`.cursor/rules/`** and in installed *
 | **codegraph** | `.cursor/rules/codegraph.mdc` — use `codegraph_*` MCP tools for structural queries. |
 | **beads** | `.cursor/rules/beads.mdc` — use `bd` for tasks; `bd prime` for workflow. |
 | **agentmemory** | `.cursor/rules/agentmemory.mdc` — `memory_*` MCP against `localhost:3111`; server config in `~/.agentmemory/.env` (`AGENTMEMORY_TOOLS=core` recommended). |
+| **working backwards** | `@working-backwards` (`.cursor/rules/working-backwards.mdc`) before multi-step work or Task subagents — micro PR/FAQ + user approval. Paste `.cursor/rules/subagent-contract.mdc` into each dispatch. Example: `docs/prfaq-example.md`. After approval, follow **orchestrate** plugin guardrails for step graph and handoffs. |
 
 ## Stack (quick)
 
