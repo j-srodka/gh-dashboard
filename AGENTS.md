@@ -5,7 +5,7 @@ Project-specific agent guidance lives in **`.cursor/rules/`** and in installed *
 | Topic | Where to look |
 |-------|----------------|
 | **context-mode** | context-mode Cursor plugin (MCP + hooks). Do not add a second `context-mode` entry in `~/.cursor/mcp.json`. |
-| **codegraph** | `.cursor/rules/codegraph.mdc` — use `codegraph_*` MCP tools for structural queries. |
+| **codegraph** | `@codegraph` (`.cursor/rules/codegraph.mdc`, requestable) — `codegraph_*` for structural queries; not always-on. |
 | **beads** | `.cursor/rules/beads.mdc` — use `bd` for tasks; `bd prime` for workflow. |
 | **agentmemory** | `.cursor/rules/agentmemory.mdc` — `memory_*` MCP against `localhost:3111`; server config in `~/.agentmemory/.env` (`AGENTMEMORY_TOOLS=core` recommended). |
 | **working backwards** | `@working-backwards` (`.cursor/rules/working-backwards.mdc`) before multi-step work or Task subagents — micro PR/FAQ + user approval. Paste `.cursor/rules/subagent-contract.mdc` into each dispatch. Example: `docs/prfaq-example.md`. After approval, follow **orchestrate** plugin guardrails for step graph and handoffs. |
